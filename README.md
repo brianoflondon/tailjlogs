@@ -1,5 +1,7 @@
 # TailJLogs
 
+[![Tests](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml/badge.svg)](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml)
+
 A command line tool to tail and follow JSONL log files with pretty formatting.
 
 ## Features
@@ -121,6 +123,29 @@ TailJLogs expects log entries in JSONL format with the following fields:
   "logger": "app.auth",
   "function": "login"
 }
+```
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/brianoflondon/tailjlogs.git
+cd tailjlogs
+uv sync
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+uv run pytest
+
+# Run with verbose output
+uv run pytest -v
+
+# Run specific test file
+uv run pytest tests/test_formatting.py
 ```
 
 ## License
