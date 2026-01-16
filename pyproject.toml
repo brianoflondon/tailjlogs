@@ -1,0 +1,19 @@
+[project]
+name = "tailjlogs"
+version = "1.0.0"
+description = "Tail and follow JSONL log files with pretty formatting"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "single-source>=0.4.0",
+    "typer>=0.15.0",
+    "watchdog>=6.0.0",
+]
+
+[project.scripts]
+tailjlogs = "tailjlogs:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
