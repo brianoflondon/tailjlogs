@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [1.0.3] - 2026-01-17
+
+### Added
+
+- **feat:** Support rotated JSONL log files (e.g., `app.jsonl.1`, `app.jsonl.2`) when tailing directories. (PR #5)
+- **feat:** Dynamically track rotated files during follow mode so rotations are picked up without restarting.
+- **test:** Add tests to validate rotated filename discovery and merged ordering.
+
+### Fixed
+
+- **chore:** Minor improvements to file discovery regex and watcher behavior.
+
 ## [1.0.2] - 2026-01-17
 
 ### Changed
