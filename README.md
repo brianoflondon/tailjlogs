@@ -48,14 +48,6 @@ uv sync
 uv pip install -e .
 ```
 
-### From PyPI (when published)
-
-```bash
-uv tool install tailjlogs
-# or
-pipx install tailjlogs
-```
-
 ### From Source (for development)
 
 ```bash
