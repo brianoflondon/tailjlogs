@@ -16,7 +16,7 @@ import json
 import os
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Dict, List, Optional
@@ -309,16 +309,24 @@ def get_timestamp_from_line(line: str) -> datetime:
     """
     Extract timestamp from a JSON log line for sorting.
 
-    Returns datetime.min if timestamp cannot be extracted.
+    Returns an offset-aware UTC datetime. If timestamp is missing or
+    invalid, returns `datetime.min` with UTC tzinfo so all returned
+    datetimes are consistently timezone-aware and sortable.
     """
     try:
         log_entry = json.loads(line.strip())
         timestamp_str = log_entry.get("timestamp", "")
         if timestamp_str:
-            return datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            # Accept trailing Z as UTC and also handle naive timestamps by
+            # assuming UTC so that comparisons don't mix naive and aware
+            # datetimes (which raises TypeError).
+            ts = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            return ts.astimezone(timezone.utc)
     except (json.JSONDecodeError, ValueError):
         pass
-    return datetime.min
+    return datetime.min.replace(tzinfo=timezone.utc)
 
 
 async def read_last_n_lines(file_path: str, n: int) -> List[str]:

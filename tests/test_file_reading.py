@@ -47,18 +47,31 @@ class TestGetTimestampFromLine:
 
     def test_invalid_json(self):
         """Test with invalid JSON."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         result = get_timestamp_from_line("not json")
-        assert result == datetime.min
+        assert result == datetime.min.replace(tzinfo=timezone.utc)
 
     def test_missing_timestamp(self):
         """Test with missing timestamp field."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         line = '{"level": "INFO", "message": "test"}'
         result = get_timestamp_from_line(line)
-        assert result == datetime.min
+        assert result == datetime.min.replace(tzinfo=timezone.utc)
+
+    def test_naive_and_aware_timestamps(self):
+        """Test that naive timestamps are assumed UTC and comparisons work."""
+        naive = '{"timestamp": "2026-01-15T11:00:00", "level": "INFO"}'
+        aware = '{"timestamp": "2026-01-15T10:00:00+00:00", "level": "INFO"}'
+
+        t_naive = get_timestamp_from_line(naive)
+        t_aware = get_timestamp_from_line(aware)
+
+        assert t_naive.tzinfo is not None
+        assert t_aware.tzinfo is not None
+        # aware 10:00 should be before naive 11:00 (both interpreted as UTC)
+        assert t_aware < t_naive
 
 
 @pytest.mark.asyncio
