@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [1.0.4] - 2026-01-17
+
+### Fixed
+
+- **fix:** Normalize timestamps to timezone-aware UTC datetimes when reading logs so merging/sorting across files does not raise TypeError (naive timestamps are interpreted as UTC).
+- **test:** Add tests to ensure naive and aware timestamps compare consistently.
+
 ## [1.0.3] - 2026-01-17
 
 ### Added
