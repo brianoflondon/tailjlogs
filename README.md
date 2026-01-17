@@ -1,5 +1,6 @@
 # TailJLogs
 
+[![PyPI](https://img.shields.io/pypi/v/tailjlogs.svg)](https://pypi.org/project/tailjlogs/)
 [![Tests](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml/badge.svg)](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml)
 
 A command line tool to tail and follow JSONL log files with pretty formatting.
@@ -19,17 +20,33 @@ A command line tool to tail and follow JSONL log files with pretty formatting.
 
 ### Standalone Installation (Recommended)
 
-Install TailJLogs as a standalone CLI tool available system-wide:
+Install TailJLogs from PyPI (recommended):
 
 ```bash
-# Using uv (fastest)
-uv tool install git+https://github.com/brianoflondon/tailjlogs.git
+# Using pip
+pip install tailjlogs
 
-# Using pipx (alternative)
-pipx install git+https://github.com/brianoflondon/tailjlogs.git
+# Install a specific version
+pip install tailjlogs==1.0.1
+
+# Using pipx (isolated CLI install)
+pipx install tailjlogs
+
+# Using uv
+uv tool install tailjlogs
 ```
 
 After installation, `tailjlogs` will be available in your PATH.
+
+If you prefer to install from GitHub (for development or edge builds), use:
+
+```bash
+# From source (development)
+git clone https://github.com/brianoflondon/tailjlogs.git
+cd tailjlogs
+uv sync
+uv pip install -e .
+```
 
 ### From PyPI (when published)
 
