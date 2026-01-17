@@ -581,21 +581,65 @@ async def follow_file(
 
 
 class MultiFileHandler(FileSystemEventHandler):
-    """Watch multiple log files in a directory for changes."""
+    """Watch multiple log files in a directory for changes.
+
+    This handler is able to dynamically add new rotated files (e.g.,
+    `app.jsonl.1`, `app.jsonl.2`) if they appear while following a
+    directory. It accepts a `handler_factory` callable that will be
+    used to create and register new `LogFileHandler` instances when
+    appropriate files are created or moved into the directory.
+    """
 
     def __init__(
         self,
         file_handlers: Dict[str, LogFileHandler],
         loop: asyncio.AbstractEventLoop,
+        handler_factory,
     ):
         self.file_handlers = file_handlers  # Maps file_path -> LogFileHandler
         self.loop = loop
+        self.factory = handler_factory
+        self._pattern = re.compile(r"\.jsonl(?:\.\d+)?$")
+
+    def _try_add_handler_for_path(self, path: str):
+        """If the path looks like a jsonl (or rotated jsonl) and isn't
+        yet tracked, create and register a handler via the factory."""
+        if path in self.file_handlers:
+            return
+        name = Path(path).name
+        if not self._pattern.search(name):
+            return
+        try:
+            handler = self.factory(path)
+            # Factory should add it into shared mappings; also add locally
+            self.file_handlers[path] = handler
+            # Kick off processing to pick up any new lines right away
+            asyncio.run_coroutine_threadsafe(handler.process_new_lines(), self.loop)
+        except Exception:
+            # Best-effort; don't let a single failure stop the watcher
+            pass
 
     def on_modified(self, event):
         """Called when any file in the watched directory is modified."""
+        # Standard case - known file
         if event.src_path in self.file_handlers:
             handler = self.file_handlers[event.src_path]
             asyncio.run_coroutine_threadsafe(handler.process_new_lines(), self.loop)
+            return
+
+        # Unknown file - see if we should start tracking it (rotated file created)
+        self._try_add_handler_for_path(event.src_path)
+
+    def on_created(self, event):
+        """Called when a new file is created in the watched directory."""
+        self._try_add_handler_for_path(event.src_path)
+
+    def on_moved(self, event):
+        """Called when a file is moved/renamed within the watched directory."""
+        # event.dest_path is the new location
+        dest = getattr(event, "dest_path", None)
+        if dest:
+            self._try_add_handler_for_path(dest)
 
 
 async def follow_multiple_files(
@@ -645,7 +689,28 @@ async def follow_multiple_files(
     for watch_dir, dir_files in dirs_to_files.items():
         # Filter handlers for this directory
         dir_handlers = {fp: all_handlers[fp] for fp in dir_files}
-        multi_handler = MultiFileHandler(dir_handlers, loop)
+
+        # Factory to create and register new handlers dynamically when
+        # rotated files are created or moved into the directory.
+        def handler_factory(file_path: str) -> LogFileHandler:
+            short_name = get_short_filename(file_path)
+            handler = LogFileHandler(
+                file_path=file_path,
+                loop=loop,
+                last_position=start_positions.get(file_path, 0),
+                min_level=min_level,
+                grep_pattern=grep_pattern,
+                grep_exclude=grep_exclude,
+                show_colors=show_colors,
+                compact=compact,
+                show_extras=show_extras,
+                filename=short_name,
+            )
+            # Register in the overall handlers mapping so main loop sees it
+            all_handlers[file_path] = handler
+            return handler
+
+        multi_handler = MultiFileHandler(dir_handlers, loop, handler_factory)
 
         observer = Observer()
         observer.schedule(multi_handler, watch_dir, recursive=False)
@@ -672,7 +737,8 @@ def get_jsonl_files(path: str) -> List[str]:
     Get JSONL files from a path.
 
     If path is a file, return it.
-    If path is a directory, return all .jsonl files sorted by modification time.
+    If path is a directory, return all files matching either
+    `*.jsonl` or `*.jsonl.<number>` sorted by modification time.
     """
     path_obj = Path(path)
 
@@ -680,8 +746,11 @@ def get_jsonl_files(path: str) -> List[str]:
         return [str(path_obj)]
 
     if path_obj.is_dir():
-        # Find all .jsonl files
-        files = list(path_obj.glob("*.jsonl")) + list(path_obj.glob("*.jsonl.*"))
+        # Find candidate files with .jsonl-like suffixes
+        candidate_files = list(path_obj.glob("*.jsonl*"))
+        # Keep only base .jsonl and rotation suffixes like .jsonl.1, .jsonl.2
+        pattern = re.compile(r"\.jsonl(?:\.\d+)?$")
+        files = [f for f in candidate_files if pattern.search(f.name)]
         # Sort by modification time (oldest first)
         files.sort(key=lambda f: f.stat().st_mtime)
         return [str(f) for f in files]
