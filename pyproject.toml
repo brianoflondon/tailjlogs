@@ -1,6 +1,6 @@
 [project]
 name = "tailjlogs"
-version = "1.0.0"
+version = "1.0.1"
 description = "Tail and follow JSONL log files with pretty formatting"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -14,10 +14,17 @@ dependencies = [
 [project.scripts]
 tailjlogs = "tailjlogs:app"
 
+[project.urls]
+Homepage = "https://github.com/brianoflondon/tailjlogs"
+Repository = "https://github.com/brianoflondon/tailjlogs"
+"Bug Tracker" = "https://github.com/brianoflondon/tailjlogs/issues"
+Changelog = "https://github.com/brianoflondon/tailjlogs/releases"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    "twine>=6.2.0",
 ]
 
 [build-system]
