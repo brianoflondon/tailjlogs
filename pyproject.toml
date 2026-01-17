@@ -1,6 +1,6 @@
 [project]
 name = "tailjlogs"
-version = "1.0.2"
+version = "1.0.3"
 description = "Tail and follow JSONL log files with pretty formatting"
 readme = "README.md"
 requires-python = ">=3.13"
