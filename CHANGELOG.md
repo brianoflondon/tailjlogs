@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.2.0] - 2026-01-18
+
+### Added
+
+- **feat:** New `--lines N` / `-n N` CLI option to limit scanning to the last N lines per file.
+- **feat:** New `--level` / `-l` CLI option to filter by minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+- **perf:** Dramatically speeds up opening large log files (e.g., 8MB JSONL) in merge mode.
+- **feat:** Uses efficient reverse-scan to find line boundaries from end of file.
+
+### Changed
+
+- **refactor:** `scan_timestamps()` now accepts optional `max_lines` and `level_filter` parameters.
+- **refactor:** Added `_find_tail_start()` helper in `LogFile` for fast tail positioning.
+- **refactor:** Added `_check_level_match()` helper in `LogLines` for level filtering.
+
 ## [2.1.2] - 2026-01-18
 
 ### Changed

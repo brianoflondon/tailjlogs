@@ -78,7 +78,23 @@ def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
     nargs=1,
     help="Path to save merged file (requires -m).",
 )
-def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
+@click.option(
+    "-n",
+    "--lines",
+    type=int,
+    default=None,
+    help="Limit to last N lines per file (speeds up large files). Use 0 for no limit.",
+)
+@click.option(
+    "-l",
+    "--level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    default=None,
+    help="Filter by minimum log level (e.g., INFO shows INFO, WARNING, ERROR, CRITICAL).",
+)
+def run(
+    files: tuple[str, ...], merge: bool, output_merge: str, lines: int | None, level: str | None
+) -> None:
     """View / tail / search log files.
 
     Supports glob patterns like *.jsonl, logs/*.log, **/*.jsonl
@@ -101,7 +117,13 @@ def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
         ctx.exit()
     if stdin_tty:
         try:
-            ui = UI(expanded_files, merge=merge, save_merge=output_merge)
+            ui = UI(
+                expanded_files,
+                merge=merge,
+                save_merge=output_merge,
+                max_lines=lines,
+                min_level=level,
+            )
             ui.run()
         except Exception:
             pass
