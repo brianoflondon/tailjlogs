@@ -105,6 +105,11 @@ class CompareTokens:
 class UI(App):
     """The top level App object."""
 
+    BINDINGS = [
+        Binding("q", "quit", "Quit", priority=True),
+        Binding("escape", "quit", "Quit", show=False),
+    ]
+
     @classmethod
     def sort_paths(cls, paths: list[str]) -> list[str]:
         return sorted(paths, key=CompareTokens)
