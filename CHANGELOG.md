@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.1.2] - 2026-01-18
+
+### Changed
+
+- **ui:** Replaced the help screen title ASCII art with a branded "TailJlogs" header (keeps version displayed).
+- **docs:** Help screen formatting improved for clarity.
+
+## [2.1.1] - 2026-01-18
+
+### Fixed
+
+- **fix:** Tab headers now display only the `filename.ext` (using `Path(path).name`) instead of the full path.
+- **chore:** Minor UI cleanup in `ui.py`.
+
 ## [2.1.0] - 2026-01-18
 
 ### Added
