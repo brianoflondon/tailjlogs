@@ -52,7 +52,7 @@ class LogScreen(Screen):
                     )
             else:
                 for path in self.app.file_paths:
-                    with TabPane(path):
+                    with TabPane(Path(path).name):
                         yield Lazy(
                             LogView(
                                 [path],
