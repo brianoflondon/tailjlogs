@@ -3,160 +3,125 @@
 [![PyPI](https://img.shields.io/pypi/v/tailjlogs.svg)](https://pypi.org/project/tailjlogs/)
 [![Tests](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml/badge.svg)](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml)
 
-A command line tool to tail and follow JSONL log files with pretty formatting.
+> **Based on [Textualize/toolong](https://github.com/Textualize/toolong) by Will McGugan**
+> 
+> A terminal application to view, tail, merge, and search log files with **enhanced JSONL support**.
+
+![TailJLogs Screenshot](https://github.com/brianoflondon/tailjlogs/assets/screenshot.png)
+
+## What's New in v2.0
+
+TailJLogs v2.0 is a complete rewrite based on the excellent [Toolong](https://github.com/Textualize/toolong) project by Will McGugan. Key enhancements:
+
+- **JSONL Compact Format**: JSONL logs display in a readable format: `01-15T09:36:38.194 INFO module 39 : message`
+- **Separate Filter Dialog** (`\` key): Hide non-matching lines (vs Find which highlights matches)
+- **Full TUI Experience**: Navigate with arrow keys, view detailed JSON with Enter
+- **Updated for Textual 7.x**: Modern async terminal UI
 
 ## Features
 
-- 📋 Display JSONL logs in a clean, readable format similar to `docker logs`
-- 🔄 Follow mode (`-f`) for real-time log monitoring
-- 🎨 Colorized output by log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- 🔍 Filter by log level (`-l WARNING`)
-- 🔎 Grep pattern matching (`-g "error|failed"`)
-- 🚫 Exclude patterns (`-G "healthcheck"`)
-- 📁 Directory support - merge multiple log files by timestamp
-- ⚡ Async file reading for performance
+- 📋 Live tailing of log files
+- 🎨 Syntax highlights common web server log formats
+- ⚡ Fast - opens multi-gigabyte files instantly
+- 📝 **Enhanced JSONL support**: Compact formatted display + pretty-printed detail view
+- 📦 Opens `.bz` and `.bz2` files automatically
+- 🔀 Merges log files by auto-detecting timestamps
+- 🔍 **Find** (`/` or `Ctrl+F`): Highlight matching lines
+- 🔎 **Filter** (`\`): Show only matching lines
 
 ## Installation
-
-### Standalone Installation (Recommended)
-
-Install TailJLogs from PyPI (recommended):
 
 ```bash
 # Using pip
 pip install tailjlogs
 
-# Install a specific version
-pip install tailjlogs==1.0.1
-
-# Using pipx (isolated CLI install)
-pipx install tailjlogs
-
-# Using uv
+# Using uv (recommended)
 uv tool install tailjlogs
-```
-
-After installation, `tailjlogs` will be available in your PATH.
-
-If you prefer to install from GitHub (for development or edge builds), use:
-
-```bash
-# From source (development)
-git clone https://github.com/brianoflondon/tailjlogs.git
-cd tailjlogs
-uv sync
-uv pip install -e .
-```
-
-### From Source (for development)
-
-```bash
-git clone https://github.com/brianoflondon/tailjlogs.git
-cd tailjlogs
-uv sync
-
-# Run directly
-uv run tailjlogs --help
-
-# Or install in editable mode
-uv pip install -e .
-```
-
-### Updating
-
-```bash
-# Using uv
-uv tool upgrade tailjlogs
 
 # Using pipx
-pipx upgrade tailjlogs
+pipx install tailjlogs
 ```
 
-### Uninstalling
-
-```bash
-# Using uv
-uv tool uninstall tailjlogs
-
-# Using pipx
-pipx uninstall tailjlogs
-```
+After installation, use either `tailjlogs` or `tl` command.
 
 ## Usage
 
 ```bash
-# Show last 50 lines and follow
-tailjlogs logs/app.jsonl -f
+# View a log file
+tailjlogs /path/to/logfile.jsonl
+tl /path/to/logfile.jsonl
 
-# Show last 100 lines with WARNING or higher
-tailjlogs logs/app.jsonl -n 100 -l WARNING
+# View multiple files (merged by timestamp)
+tl access.log error.log app.jsonl
 
-# Filter by regex pattern and follow
-tailjlogs logs/app.jsonl -f -g "error|failed"
-
-# Exclude health check logs
-tailjlogs logs/app.jsonl -f -G "healthcheck"
-
-# Tail a directory (merges all .jsonl files by timestamp)
-tailjlogs logs/ -n 100 -f
-
-# Show version
-tailjlogs --version
+# View a directory of log files
+tl /var/log/myapp/
 ```
 
-## Options
+## Keyboard Shortcuts
 
-| Option           | Short | Description                                                          |
-| ---------------- | ----- | -------------------------------------------------------------------- |
-| `--follow`       | `-f`  | Follow the log file for new entries (like tail -f)                   |
-| `--tail`         | `-n`  | Number of lines to show from the end (default: 50)                   |
-| `--level`        | `-l`  | Minimum log level to display (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
-| `--grep`         | `-g`  | Filter messages by regex pattern (include matches)                   |
-| `--grep-exclude` | `-G`  | Exclude messages matching regex pattern                              |
-| `--no-color`     |       | Disable colored output                                               |
-| `--verbose`      | `-v`  | Use verbose output format                                            |
-| `--extras`       | `-e`  | Show extra fields in log entries                                     |
-| `--version`      | `-V`  | Show version and exit                                                |
+### Navigation
+| Key | Action |
+|-----|--------|
+| `↑`/`↓` or `w`/`s` or `k`/`j` | Move up/down a line |
+| `←`/`→` or `h`/`l` | Scroll left/right |
+| `Page Up`/`Page Down` or `Space` | Next/previous page |
+| `Home` or `G` | Jump to start |
+| `End` or `g` | Jump to end (press twice to tail) |
+| `m`/`M` | Advance +1/-1 minutes |
+| `o`/`O` | Advance +1/-1 hours |
+| `d`/`D` | Advance +1/-1 days |
 
-## Expected JSONL Format
+### Features
+| Key | Action |
+|-----|--------|
+| `/` or `Ctrl+F` | **Find** - highlight matching lines |
+| `\` | **Filter** - show only matching lines |
+| `Enter` | Toggle pointer mode / View JSON detail |
+| `Ctrl+L` | Toggle line numbers |
+| `Ctrl+T` | Tail current file |
+| `?` | Show help |
+| `Ctrl+C` or `q` | Exit |
 
-TailJLogs expects log entries in JSONL format with the following fields:
+## JSONL Format
 
+TailJLogs displays JSONL log entries in a compact format:
+
+```
+01-15T09:36:38.194 INFO     auth                  42 : User logged in
+01-15T09:36:39.521 WARNING  api                  156 : Rate limit approaching
+01-15T09:36:40.003 ERROR    database             89 : Connection timeout
+```
+
+Press `Enter` on any line to see the full JSON object, pretty-printed.
+
+Expected JSONL fields:
 ```json
 {
-  "timestamp": "2025-01-16T10:30:45.123456Z",
+  "timestamp": "2025-01-15T09:36:38.194Z",
   "level": "INFO",
   "message": "User logged in",
   "module": "auth",
-  "line": 42,
-  "logger": "app.auth",
-  "function": "login"
+  "line": 42
 }
 ```
 
 ## Development
 
-### Setup
-
 ```bash
 git clone https://github.com/brianoflondon/tailjlogs.git
 cd tailjlogs
 uv sync
+uv run tailjlogs --help
 ```
 
-### Running Tests
+## Credits
 
-```bash
-# Run all tests
-uv run pytest
-
-# Run with verbose output
-uv run pytest -v
-
-# Run specific test file
-uv run pytest tests/test_formatting.py
-```
+This project is based on [Toolong](https://github.com/Textualize/toolong) by [Will McGugan](https://www.willmcgugan.com/) and the [Textualize](https://www.textualize.io/) team. Built with [Textual](https://textual.textualize.io/).
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+Original Toolong: Copyright (c) 2024 Will McGugan  
+This fork: Copyright (c) 2025 Brian of London

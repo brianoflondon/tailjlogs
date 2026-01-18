@@ -1,61 +1,63 @@
 """Pytest configuration and fixtures."""
 
-from pathlib import Path
+import json
 
 import pytest
 
 
 @pytest.fixture
-def fixtures_dir() -> Path:
-    """Return the path to the test fixtures directory."""
-    return Path(__file__).parent / "fixtures"
+def sample_jsonl_content():
+    """Sample JSONL log content for testing."""
+    return [
+        {
+            "timestamp": "2025-01-15T09:36:38.194Z",
+            "level": "INFO",
+            "message": "Application started",
+            "module": "main",
+            "line": 10,
+        },
+        {
+            "timestamp": "2025-01-15T09:36:39.521Z",
+            "level": "WARNING",
+            "message": "Rate limit approaching",
+            "module": "api",
+            "line": 156,
+        },
+        {
+            "timestamp": "2025-01-15T09:36:40.003Z",
+            "level": "ERROR",
+            "message": "Connection timeout",
+            "module": "database",
+            "line": 89,
+        },
+    ]
 
 
 @pytest.fixture
-def test_data_file(fixtures_dir: Path) -> Path:
-    """Return path to test_data.jsonl."""
-    return fixtures_dir / "test_data.jsonl"
+def sample_jsonl_file(tmp_path, sample_jsonl_content):
+    """Create a temporary JSONL file for testing."""
+    log_file = tmp_path / "test.jsonl"
+    with open(log_file, "w") as f:
+        for entry in sample_jsonl_content:
+            f.write(json.dumps(entry) + "\n")
+    return log_file
 
 
 @pytest.fixture
-def test_data2_file(fixtures_dir: Path) -> Path:
-    """Return path to test_data2.jsonl."""
-    return fixtures_dir / "test_data2.jsonl"
+def sample_plain_log_file(tmp_path):
+    """Create a temporary plain text log file for testing."""
+    log_file = tmp_path / "test.log"
+    log_file.write_text(
+        "2025-01-15 09:36:38 INFO Application started\n"
+        "2025-01-15 09:36:39 WARNING Rate limit approaching\n"
+        "2025-01-15 09:36:40 ERROR Connection timeout\n"
+    )
+    return log_file
 
 
 @pytest.fixture
-def sample_log_entry() -> dict:
-    """Return a sample log entry for testing."""
-    return {
-        "level": "INFO",
-        "timestamp": "2026-01-15T15:07:31.332918+00:00",
-        "message": "Test message",
-        "module": "test_module",
-        "line": 42,
-        "logger": "test_logger",
-        "function": "test_function",
-    }
-
-
-@pytest.fixture
-def sample_debug_entry() -> dict:
-    """Return a sample DEBUG log entry."""
-    return {
-        "level": "DEBUG",
-        "timestamp": "2026-01-15T15:07:29.609132+00:00",
-        "message": "Debug message",
-        "module": "debug_module",
-        "line": 10,
-    }
-
-
-@pytest.fixture
-def sample_error_entry() -> dict:
-    """Return a sample ERROR log entry."""
-    return {
-        "level": "ERROR",
-        "timestamp": "2026-01-15T15:07:31.000000+00:00",
-        "message": "Error occurred",
-        "module": "error_module",
-        "line": 99,
-    }
+def empty_log_file(tmp_path):
+    """Create an empty log file for testing."""
+    log_file = tmp_path / "empty.log"
+    log_file.write_text("")
+    return log_file

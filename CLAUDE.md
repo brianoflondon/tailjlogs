@@ -2,49 +2,54 @@
 
 ## Project Overview
 
-**TailJLogs** is a Python command-line tool for tailing and following JSONL (JSON Lines) log files with pretty formatting. It's similar to `tail -f` but designed specifically for structured JSON log output.
+**TailJLogs** is a terminal application to view, tail, merge, and search log files with enhanced JSONL support. It's based on [Toolong](https://github.com/Textualize/toolong) by Will McGugan.
+
+## Key Enhancements over Toolong
+
+1. **JSONL Compact Format** - JSONL logs display in readable format: `01-15T09:36:38.194 INFO module 39 : message`
+2. **Separate Filter Dialog** (`\` key) - Hide non-matching lines (vs Find which highlights)
+3. **Updated for Textual 7.x** - Modern async terminal UI
 
 ## Architecture
 
-### Main File: `tailjlogs.py`
+### Source Structure: `src/tailjlogs/`
 
-The entire application is in a single file with these key components:
-
-1. **CLI Setup** - Uses Typer for command-line argument parsing
-2. **Log Formatting** - `format_log_entry()` and `process_line()` handle JSON parsing and colorized output
-3. **File Reading** - `read_last_n_lines()` efficiently reads from file end
-4. **File Following** - Uses `watchdog` library to monitor file changes in real-time
-5. **Multi-file Support** - Can merge logs from multiple files by timestamp
+| File | Purpose |
+|------|---------|
+| `cli.py` | CLI entry point using Click |
+| `ui.py` | Main Textual App class |
+| `log_view.py` | Log view widget containing log lines and panels |
+| `log_lines.py` | Core scrollable log line display widget |
+| `log_file.py` | Log file abstraction (handles compressed files) |
+| `format_parser.py` | **Key file** - Parses log formats including JSONL |
+| `find_dialog.py` | Find and Filter dialogs |
+| `line_panel.py` | Detail panel for selected line |
+| `timestamps.py` | Timestamp parsing and detection |
+| `highlighter.py` | Syntax highlighting |
+| `watcher.py` | File watching abstraction |
+| `messages.py` | Textual message types |
+| `help.py` | Help screen |
 
 ### Key Classes
 
-- `LogLevel` - Enum for log level filtering (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- `LogFileHandler` - Watchdog event handler for single file monitoring
-- `MultiFileHandler` - Watchdog event handler for multiple file monitoring
+- `JSONLogFormat` in `format_parser.py` - Handles JSONL formatting (compact display)
+- `LogLines` in `log_lines.py` - Main scrollable widget for log display
+- `LinePanel` in `line_panel.py` - Shows full JSON when pressing Enter
+- `FindDialog` in `find_dialog.py` - Find and Filter functionality
 
 ### Dependencies
 
-- `typer` - CLI framework
-- `aiofiles` - Async file I/O
-- `watchdog` - File system monitoring
-- `single-source` - Version from pyproject.toml
+- `click` - CLI framework
+- `textual` - Terminal UI framework
+- `rich` - Text formatting and colors (bundled with textual)
+- `typing-extensions` - Type hints backports
 
-## Version Management
-
-The version is single-sourced from `pyproject.toml` using the `single-source` library:
-
-```python
-from single_source import get_version
-__version__ = get_version(__name__, Path(__file__).parent)
-```
-
-## Entry Point
-
-The CLI entry point is defined in `pyproject.toml`:
+## Entry Points
 
 ```toml
 [project.scripts]
-tailjlogs = "tailjlogs:app"
+tailjlogs = "tailjlogs.cli:run"
+tl = "tailjlogs.cli:run"
 ```
 
 ## Development Commands
@@ -55,9 +60,10 @@ uv sync
 
 # Run the tool
 uv run tailjlogs --help
+uv run tl /path/to/logs.jsonl
 
-# Run with a log file
-uv run tailjlogs /path/to/logs.jsonl -f
+# Run with dev tools (textual console)
+uv run textual run --dev src/tailjlogs/ui.py
 
 # Build package
 uv build
@@ -65,11 +71,27 @@ uv build
 
 ## Testing
 
-Currently no test suite. When adding tests, create a `tests/` directory with pytest.
+```bash
+uv run pytest
+```
 
 ## Code Style
 
-- Python 3.13+
-- Type hints using `Annotated` for Typer options
-- Async/await for file operations
-- ANSI color codes for terminal output
+- Python 3.9+
+- Type hints throughout
+- Async/await for Textual widgets
+- Textual CSS for styling
+
+## JSONL Format Expected
+
+```json
+{
+  "timestamp": "2025-01-15T09:36:38.194Z",
+  "level": "INFO",
+  "message": "User logged in",
+  "module": "auth",
+  "line": 42
+}
+```
+
+Displayed as: `01-15T09:36:38.194 INFO     auth                  42 : User logged in`
