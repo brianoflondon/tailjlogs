@@ -47,7 +47,7 @@ class LogScreen(Screen):
                         LogView(
                             self.app.file_paths,
                             self.app.watcher,
-                            can_tail=False,
+                            can_tail=True,
                         )
                     )
             else:

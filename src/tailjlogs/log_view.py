@@ -447,7 +447,7 @@ class LogView(Horizontal):
 
     def action_toggle_tail(self) -> None:
         if not self.can_tail:
-            self.notify("Can't tail merged files", title="Tail", severity="error")
+            self.notify("Can't tail this file", title="Tail", severity="error")
         else:
             self.tail = not self.tail
 

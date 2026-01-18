@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import os
+import sys
 from glob import glob
 from importlib.metadata import version
 from pathlib import Path
-import os
-import sys
 
 import click
 
@@ -13,18 +13,18 @@ from tailjlogs.ui import UI
 
 def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
     """Expand glob patterns and resolve paths.
-    
+
     Handles wildcards like *.jsonl, **/*.log, etc.
     Also expands directories to include log files within them.
     """
     LOG_EXTENSIONS = (".jsonl", ".json", ".log", ".txt", ".gz", ".bz2")
-    
+
     expanded: list[str] = []
     seen: set[str] = set()
-    
+
     for pattern in patterns:
         path = Path(pattern)
-        
+
         # Check if it's a glob pattern
         if any(c in pattern for c in "*?["):
             # Expand the glob pattern
@@ -63,7 +63,7 @@ def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
             if pattern not in seen:
                 seen.add(pattern)
                 expanded.append(pattern)
-    
+
     return expanded
 
 
@@ -80,9 +80,9 @@ def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
 )
 def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
     """View / tail / search log files.
-    
+
     Supports glob patterns like *.jsonl, logs/*.log, **/*.jsonl
-    
+
     Examples:
         tl app.jsonl                    # Single file
         tl *.jsonl                      # All .jsonl files in current dir
@@ -91,10 +91,10 @@ def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
         tl app.log error.log --merge    # Merge multiple files
     """
     stdin_tty = sys.__stdin__.isatty()
-    
+
     # Expand glob patterns and directories
     expanded_files = expand_file_patterns(files) if files else []
-    
+
     if not expanded_files and stdin_tty:
         ctx = click.get_current_context()
         click.echo(ctx.get_help())
@@ -106,8 +106,8 @@ def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
         except Exception:
             pass
     else:
-        import signal
         import selectors
+        import signal
         import subprocess
         import tempfile
 
@@ -119,10 +119,7 @@ def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
         signal.signal(signal.SIGTERM, request_exit)
 
         # Write piped data to a temporary file
-        with tempfile.NamedTemporaryFile(
-            mode="w+b", buffering=0, prefix="tl_"
-        ) as temp_file:
-
+        with tempfile.NamedTemporaryFile(mode="w+b", buffering=0, prefix="tl_") as temp_file:
             # Get input directly from /dev/tty to free up stdin
             with open("/dev/tty", "rb", buffering=0) as tty_stdin:
                 # Launch a new process to render the UI
@@ -132,7 +129,6 @@ def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
                     close_fds=True,
                     env={**os.environ, "TEXTUAL_ALLOW_SIGNALS": "1"},
                 ) as process:
-
                     # Current process copies from stdin to the temp file
                     selector = selectors.SelectSelector()
                     selector.register(sys.stdin.fileno(), selectors.EVENT_READ)

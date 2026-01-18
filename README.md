@@ -9,6 +9,13 @@
 
 ![TailJLogs Screenshot](https://github.com/brianoflondon/tailjlogs/assets/screenshot.png)
 
+## What's New in v2.1
+
+- **Merged File Tailing**: Now you can tail multiple merged files simultaneously (`Ctrl+T`)
+- **Filename Prefix in Merged View**: Each line shows a colored filename prefix (docker-compose style)
+- **Glob Pattern Support**: Use wildcards like `*.jsonl`, `logs/**/*.log`
+- **Directory Expansion**: Pass a directory to automatically find all log files
+
 ## What's New in v2.0
 
 TailJLogs v2.0 is a complete rewrite based on the excellent [Toolong](https://github.com/Textualize/toolong) project by Will McGugan. Key enhancements:
@@ -20,14 +27,15 @@ TailJLogs v2.0 is a complete rewrite based on the excellent [Toolong](https://gi
 
 ## Features
 
-- 📋 Live tailing of log files
+- 📋 **Live tailing** of log files (single or merged)
 - 🎨 Syntax highlights common web server log formats
 - ⚡ Fast - opens multi-gigabyte files instantly
 - 📝 **Enhanced JSONL support**: Compact formatted display + pretty-printed detail view
 - 📦 Opens `.bz` and `.bz2` files automatically
-- 🔀 Merges log files by auto-detecting timestamps
+- 🔀 **Merge & tail multiple files** with colored filename prefixes
 - 🔍 **Find** (`/` or `Ctrl+F`): Highlight matching lines
 - 🔎 **Filter** (`\`): Show only matching lines
+- 📁 **Glob patterns**: `*.jsonl`, `logs/**/*.log`, directories
 
 ## Installation
 
@@ -62,11 +70,30 @@ After installation, use either `tailjlogs` or `tl` command.
 tailjlogs /path/to/logfile.jsonl
 tl /path/to/logfile.jsonl
 
-# View multiple files (merged by timestamp)
+# View multiple files (opens in tabs)
 tl access.log error.log app.jsonl
 
-# View a directory of log files
-tl /var/log/myapp/
+# Merge multiple files by timestamp
+tl --merge access.log error.log app.jsonl
+
+# Glob patterns
+tl *.jsonl                    # All .jsonl files
+tl logs/**/*.log              # Recursive glob
+tl /var/log/myapp/            # Directory (finds all log files)
+
+# Merge and tail (docker-compose style output)
+tl --merge *.jsonl
+# Then press Ctrl+T to start tailing
+```
+
+### Merged View with Filename Prefix
+
+When viewing merged files, each line shows a colored filename prefix:
+
+```
+db_monitor      │ 01-15T09:36:38.194 INFO  cache   15 : Cache hit
+error           │ 01-15T09:36:38.200 ERROR api     42 : Connection failed
+db_monitor      │ 01-15T09:36:38.210 DEBUG db      89 : Query executed
 ```
 
 ## Keyboard Shortcuts

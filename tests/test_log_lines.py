@@ -1,14 +1,8 @@
 """Tests for the log_lines module."""
 
 import pytest
-from rich.style import Style
-from unittest.mock import MagicMock
 
-from tailjlogs.log_lines import (
-    FILENAME_PREFIX_WIDTH,
-    FILE_COLORS,
-    FILENAME_SEPARATOR,
-)
+from tailjlogs.log_lines import FILE_COLORS, FILENAME_PREFIX_WIDTH, FILENAME_SEPARATOR
 
 
 class TestFilenamePrefix:
@@ -52,7 +46,7 @@ class TestFilenamePrefix:
     def test_filename_truncation_logic(self):
         """Test that long filenames are truncated with ellipsis."""
         name = "very_long_filename_that_exceeds_limit"
-        
+
         if len(name) > FILENAME_PREFIX_WIDTH:
             name = name[: FILENAME_PREFIX_WIDTH - 1] + "…"
         name = name.ljust(FILENAME_PREFIX_WIDTH)

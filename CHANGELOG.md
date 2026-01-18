@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.1.0] - 2026-01-18
+
+### Added
+
+- **feat:** Live tailing for merged files - watch multiple files simultaneously with `Ctrl+T`.
+- **feat:** Filename prefix in merged view - each line shows colored filename (docker-compose style).
+- **feat:** Glob pattern support in CLI - use `*.jsonl`, `logs/**/*.log`, etc.
+- **feat:** Directory expansion - pass a directory to automatically find all log files.
+- **test:** New tests for filename prefix display and glob expansion.
+
+### Changed
+
+- **fix:** New lines in merged tail mode are inserted in sorted timestamp order.
+- **refactor:** `start_tail()` now watches all files in merged mode.
+- **refactor:** `on_new_breaks()` uses `bisect.insort()` for efficient sorted insertion.
+
 ## [2.0.0] - 2026-01-18
 
 ### Changed
