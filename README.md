@@ -4,7 +4,7 @@
 [![Tests](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml/badge.svg)](https://github.com/brianoflondon/tailjlogs/actions/workflows/tests.yml)
 
 > **Based on [Textualize/toolong](https://github.com/Textualize/toolong) by Will McGugan**
-> 
+>
 > A terminal application to view, tail, merge, and search log files with **enhanced JSONL support**.
 
 ![TailJLogs Screenshot](https://github.com/brianoflondon/tailjlogs/assets/screenshot.png)
@@ -42,6 +42,17 @@ uv tool install tailjlogs
 pipx install tailjlogs
 ```
 
+## Update
+
+```bash
+# Using pip
+pip install --upgrade tailjlogs
+# Using uv
+uv tool update tailjlogs
+# Using pipx
+pipx upgrade tailjlogs
+```
+
 After installation, use either `tailjlogs` or `tl` command.
 
 ## Usage
@@ -61,27 +72,29 @@ tl /var/log/myapp/
 ## Keyboard Shortcuts
 
 ### Navigation
-| Key | Action |
-|-----|--------|
-| `↑`/`↓` or `w`/`s` or `k`/`j` | Move up/down a line |
-| `←`/`→` or `h`/`l` | Scroll left/right |
-| `Page Up`/`Page Down` or `Space` | Next/previous page |
-| `Home` or `G` | Jump to start |
-| `End` or `g` | Jump to end (press twice to tail) |
-| `m`/`M` | Advance +1/-1 minutes |
-| `o`/`O` | Advance +1/-1 hours |
-| `d`/`D` | Advance +1/-1 days |
+
+| Key                              | Action                            |
+| -------------------------------- | --------------------------------- |
+| `↑`/`↓` or `w`/`s` or `k`/`j`    | Move up/down a line               |
+| `←`/`→` or `h`/`l`               | Scroll left/right                 |
+| `Page Up`/`Page Down` or `Space` | Next/previous page                |
+| `Home` or `G`                    | Jump to start                     |
+| `End` or `g`                     | Jump to end (press twice to tail) |
+| `m`/`M`                          | Advance +1/-1 minutes             |
+| `o`/`O`                          | Advance +1/-1 hours               |
+| `d`/`D`                          | Advance +1/-1 days                |
 
 ### Features
-| Key | Action |
-|-----|--------|
-| `/` or `Ctrl+F` | **Find** - highlight matching lines |
-| `\` | **Filter** - show only matching lines |
-| `Enter` | Toggle pointer mode / View JSON detail |
-| `Ctrl+L` | Toggle line numbers |
-| `Ctrl+T` | Tail current file |
-| `?` | Show help |
-| `Ctrl+C` or `q` | Exit |
+
+| Key             | Action                                 |
+| --------------- | -------------------------------------- |
+| `/` or `Ctrl+F` | **Find** - highlight matching lines    |
+| `\`             | **Filter** - show only matching lines  |
+| `Enter`         | Toggle pointer mode / View JSON detail |
+| `Ctrl+L`        | Toggle line numbers                    |
+| `Ctrl+T`        | Tail current file                      |
+| `?`             | Show help                              |
+| `Ctrl+C` or `q` | Exit                                   |
 
 ## JSONL Format
 
@@ -96,6 +109,7 @@ TailJLogs displays JSONL log entries in a compact format:
 Press `Enter` on any line to see the full JSON object, pretty-printed.
 
 Expected JSONL fields:
+
 ```json
 {
   "timestamp": "2025-01-15T09:36:38.194Z",
@@ -123,5 +137,5 @@ This project is based on [Toolong](https://github.com/Textualize/toolong) by [Wi
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-Original Toolong: Copyright (c) 2024 Will McGugan  
+Original Toolong: Copyright (c) 2024 Will McGugan
 This fork: Copyright (c) 2025 Brian of London
