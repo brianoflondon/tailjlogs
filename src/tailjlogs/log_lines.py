@@ -168,6 +168,7 @@ class LogLines(ScrollView, inherit_bindings=False):
         scrollbar-gutter: stable;
         overflow: scroll;
         border: heavy transparent;
+        background: $surface;
         .loglines--filter-highlight {
             background: $secondary;
             color: auto;
@@ -778,7 +779,8 @@ class LogLines(ScrollView, inherit_bindings=False):
             pointer_style = self.get_component_rich_style("loglines--pointer-highlight")
             strip = strip.crop_extend(scroll_x, scroll_x + width, pointer_style)
         else:
-            strip = strip.crop_extend(scroll_x, scroll_x + width, None)
+            # Use the widget's background style to fill the entire line width
+            strip = strip.crop_extend(scroll_x, scroll_x + width, self.rich_style)
 
         if self.show_gutter or self.show_line_numbers:
             line_number_style = self.get_component_rich_style(
