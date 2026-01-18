@@ -1,12 +1,70 @@
 from __future__ import annotations
 
+from glob import glob
 from importlib.metadata import version
+from pathlib import Path
 import os
 import sys
 
 import click
 
 from tailjlogs.ui import UI
+
+
+def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
+    """Expand glob patterns and resolve paths.
+    
+    Handles wildcards like *.jsonl, **/*.log, etc.
+    Also expands directories to include log files within them.
+    """
+    LOG_EXTENSIONS = (".jsonl", ".json", ".log", ".txt", ".gz", ".bz2")
+    
+    expanded: list[str] = []
+    seen: set[str] = set()
+    
+    for pattern in patterns:
+        path = Path(pattern)
+        
+        # Check if it's a glob pattern
+        if any(c in pattern for c in "*?["):
+            # Expand the glob pattern
+            matches = sorted(glob(pattern, recursive=True))
+            for match in matches:
+                match_path = Path(match)
+                if match_path.is_file():
+                    abs_path = str(match_path.resolve())
+                    if abs_path not in seen:
+                        seen.add(abs_path)
+                        expanded.append(abs_path)
+        elif path.is_dir():
+            # If it's a directory, find all log files in it
+            for ext in LOG_EXTENSIONS:
+                for file_path in sorted(path.glob(f"*{ext}")):
+                    if file_path.is_file():
+                        abs_path = str(file_path.resolve())
+                        if abs_path not in seen:
+                            seen.add(abs_path)
+                            expanded.append(abs_path)
+        elif path.is_file():
+            # Regular file
+            abs_path = str(path.resolve())
+            if abs_path not in seen:
+                seen.add(abs_path)
+                expanded.append(abs_path)
+        elif path.exists():
+            # Some other type of path
+            abs_path = str(path.resolve())
+            if abs_path not in seen:
+                seen.add(abs_path)
+                expanded.append(abs_path)
+        else:
+            # Path doesn't exist - might be a glob that matched nothing
+            # or a typo. Let it through so the UI can show an error.
+            if pattern not in seen:
+                seen.add(pattern)
+                expanded.append(pattern)
+    
+    return expanded
 
 
 @click.command()
@@ -20,16 +78,30 @@ from tailjlogs.ui import UI
     nargs=1,
     help="Path to save merged file (requires -m).",
 )
-def run(files: list[str], merge: bool, output_merge: str) -> None:
-    """View / tail / search log files."""
+def run(files: tuple[str, ...], merge: bool, output_merge: str) -> None:
+    """View / tail / search log files.
+    
+    Supports glob patterns like *.jsonl, logs/*.log, **/*.jsonl
+    
+    Examples:
+        tl app.jsonl                    # Single file
+        tl *.jsonl                      # All .jsonl files in current dir
+        tl logs/                        # All log files in logs/ directory
+        tl "logs/**/*.jsonl"            # Recursive glob (quote to prevent shell expansion)
+        tl app.log error.log --merge    # Merge multiple files
+    """
     stdin_tty = sys.__stdin__.isatty()
-    if not files and stdin_tty:
+    
+    # Expand glob patterns and directories
+    expanded_files = expand_file_patterns(files) if files else []
+    
+    if not expanded_files and stdin_tty:
         ctx = click.get_current_context()
         click.echo(ctx.get_help())
         ctx.exit()
     if stdin_tty:
         try:
-            ui = UI(files, merge=merge, save_merge=output_merge)
+            ui = UI(expanded_files, merge=merge, save_merge=output_merge)
             ui.run()
         except Exception:
             pass

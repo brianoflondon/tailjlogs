@@ -45,6 +45,24 @@ SPLIT_REGEX = r"[\s/\[\]\(\)\"\/]"
 
 MAX_LINE_LENGTH = 1000
 
+# Filename prefix settings for merged view
+FILENAME_PREFIX_WIDTH = 15
+FILENAME_SEPARATOR = " │ "
+
+# Colors for different files in merged view (cycle through these)
+FILE_COLORS = [
+    "bright_cyan",
+    "bright_magenta",
+    "bright_yellow",
+    "bright_green",
+    "bright_blue",
+    "bright_red",
+    "cyan",
+    "magenta",
+    "yellow",
+    "green",
+]
+
 
 @dataclass
 class LineRead(Message):
@@ -583,6 +601,33 @@ class LogLines(ScrollView, inherit_bindings=False):
                 self._line_cache[cache_key] = line
             return line
 
+    def _get_filename_prefix(self, log_file: LogFile) -> tuple[str, Style]:
+        """Get the filename prefix and style for merged view display.
+        
+        Returns a tuple of (formatted_name, style) where formatted_name is
+        the filename without extension, truncated/padded to FILENAME_PREFIX_WIDTH.
+        """
+        # Get filename without extension
+        name = log_file.name
+        # Remove common log extensions
+        for ext in (".jsonl", ".json", ".log", ".txt", ".gz", ".bz2"):
+            if name.lower().endswith(ext):
+                name = name[:-len(ext)]
+        
+        # Truncate or pad to fixed width
+        if len(name) > FILENAME_PREFIX_WIDTH:
+            name = name[:FILENAME_PREFIX_WIDTH-1] + "…"
+        name = name.ljust(FILENAME_PREFIX_WIDTH)
+        
+        # Get color based on file index
+        try:
+            file_index = self.log_files.index(log_file)
+        except ValueError:
+            file_index = 0
+        color = FILE_COLORS[file_index % len(FILE_COLORS)]
+        
+        return name, Style(color=color)
+
     def get_text(
         self,
         line_index: int,
@@ -679,6 +724,15 @@ class LogLines(ScrollView, inherit_bindings=False):
             strip = self._render_line_cache[cache_key]
         except KeyError:
             line, text, timestamp = self.get_text(index, abbreviate=True, block=True)
+            
+            # Add filename prefix for merged view
+            if self._merge_lines is not None and len(self.log_files) > 1:
+                log_file, _ = self.get_log_file_from_index(index)
+                prefix_name, prefix_style = self._get_filename_prefix(log_file)
+                prefix_text = Text(prefix_name, style=prefix_style)
+                prefix_text.append(FILENAME_SEPARATOR, style="dim")
+                text = Text.assemble(prefix_text, text)
+            
             text.stylize_before(style)
 
             if is_pointer:
