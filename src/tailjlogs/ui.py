@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import locale
-
 from pathlib import Path
 
 from rich import terminal_theme
@@ -11,16 +10,14 @@ from textual.lazy import Lazy
 from textual.screen import Screen
 from textual.widgets import TabbedContent, TabPane
 
+from tailjlogs.help import HelpScreen
 from tailjlogs.log_view import LogView
 from tailjlogs.watcher import get_watcher
-from tailjlogs.help import HelpScreen
-
 
 locale.setlocale(locale.LC_ALL, "")
 
 
 class LogScreen(Screen):
-
     BINDINGS = [
         Binding("f1", "help", "Help"),
     ]
@@ -28,12 +25,12 @@ class LogScreen(Screen):
     CSS = """
     LogScreen {
         layers: overlay;
-        & TabPane {           
+        & TabPane {
             padding: 0;
         }
         & Tabs:focus Underline > .underline--bar {
             color: $accent;
-        }        
+        }
         Underline > .underline--bar {
             color: $panel;
         }
