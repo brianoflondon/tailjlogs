@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import bisect
 import mmap
 import platform
 import re
@@ -44,6 +45,24 @@ from tailjlogs.watcher import WatcherBase
 SPLIT_REGEX = r"[\s/\[\]\(\)\"\/]"
 
 MAX_LINE_LENGTH = 1000
+
+# Filename prefix settings for merged view
+FILENAME_PREFIX_WIDTH = 15
+FILENAME_SEPARATOR = " │ "
+
+# Colors for different files in merged view (cycle through these)
+FILE_COLORS = [
+    "bright_cyan",
+    "bright_magenta",
+    "bright_yellow",
+    "bright_green",
+    "bright_blue",
+    "bright_red",
+    "cyan",
+    "magenta",
+    "yellow",
+    "green",
+]
 
 
 @dataclass
@@ -149,6 +168,7 @@ class LogLines(ScrollView, inherit_bindings=False):
         scrollbar-gutter: stable;
         overflow: scroll;
         border: heavy transparent;
+        background: $surface;
         .loglines--filter-highlight {
             background: $secondary;
             color: auto;
@@ -351,25 +371,40 @@ class LogLines(ScrollView, inherit_bindings=False):
         self.initial_scan_worker = self.run_scan(self.app.save_merge)
 
     def start_tail(self) -> None:
-        def size_changed(size: int, breaks: list[int]) -> None:
-            """Callback when the file changes size."""
-            with self._lock:
-                for offset, _ in enumerate(breaks, 1):
-                    self.get_line_from_index(self.line_count - offset)
-            self.post_message(NewBreaks(self.log_file, breaks, size, tail=True))
-            if self.message_queue_size > 10:
-                while self.message_queue_size > 2:
-                    time.sleep(0.1)
+        """Start watching files for changes (tail mode).
+
+        For single files, watches just that file.
+        For merged files, watches all files and inserts new lines in sorted order.
+        """
+
+        def make_size_changed_callback(watched_log_file: LogFile):
+            """Create a callback for a specific log file."""
+
+            def size_changed(size: int, breaks: list[int]) -> None:
+                """Callback when the file changes size."""
+                with self._lock:
+                    for offset, _ in enumerate(breaks, 1):
+                        self.get_line_from_index(self.line_count - offset)
+                self.post_message(NewBreaks(watched_log_file, breaks, size, tail=True))
+                if self.message_queue_size > 10:
+                    while self.message_queue_size > 2:
+                        time.sleep(0.1)
+
+            return size_changed
 
         def watch_error(error: Exception) -> None:
             """Callback when there is an error watching the file."""
             self.post_message(FileError(error))
 
-        self.watcher.add(
-            self.log_file,
-            size_changed,
-            watch_error,
-        )
+        # Watch all files that can be tailed
+        files_to_watch = self.log_files if self._merge_lines is not None else [self.log_file]
+        for log_file in files_to_watch:
+            if log_file.can_tail:
+                self.watcher.add(
+                    log_file,
+                    make_size_changed_callback(log_file),
+                    watch_error,
+                )
 
     @work(thread=True)
     def run_scan(self, save_merge: str | None = None) -> None:
@@ -583,6 +618,33 @@ class LogLines(ScrollView, inherit_bindings=False):
                 self._line_cache[cache_key] = line
             return line
 
+    def _get_filename_prefix(self, log_file: LogFile) -> tuple[str, Style]:
+        """Get the filename prefix and style for merged view display.
+
+        Returns a tuple of (formatted_name, style) where formatted_name is
+        the filename without extension, truncated/padded to FILENAME_PREFIX_WIDTH.
+        """
+        # Get filename without extension
+        name = log_file.name
+        # Remove common log extensions
+        for ext in (".jsonl", ".json", ".log", ".txt", ".gz", ".bz2"):
+            if name.lower().endswith(ext):
+                name = name[: -len(ext)]
+
+        # Truncate or pad to fixed width
+        if len(name) > FILENAME_PREFIX_WIDTH:
+            name = name[: FILENAME_PREFIX_WIDTH - 1] + "…"
+        name = name.ljust(FILENAME_PREFIX_WIDTH)
+
+        # Get color based on file index
+        try:
+            file_index = self.log_files.index(log_file)
+        except ValueError:
+            file_index = 0
+        color = FILE_COLORS[file_index % len(FILE_COLORS)]
+
+        return name, Style(color=color)
+
     def get_text(
         self,
         line_index: int,
@@ -679,6 +741,15 @@ class LogLines(ScrollView, inherit_bindings=False):
             strip = self._render_line_cache[cache_key]
         except KeyError:
             line, text, timestamp = self.get_text(index, abbreviate=True, block=True)
+
+            # Add filename prefix for merged view
+            if self._merge_lines is not None and len(self.log_files) > 1:
+                log_file, _ = self.get_log_file_from_index(index)
+                prefix_name, prefix_style = self._get_filename_prefix(log_file)
+                prefix_text = Text(prefix_name, style=prefix_style)
+                prefix_text.append(FILENAME_SEPARATOR, style="dim")
+                text = Text.assemble(prefix_text, text)
+
             text.stylize_before(style)
 
             if is_pointer:
@@ -708,7 +779,8 @@ class LogLines(ScrollView, inherit_bindings=False):
             pointer_style = self.get_component_rich_style("loglines--pointer-highlight")
             strip = strip.crop_extend(scroll_x, scroll_x + width, pointer_style)
         else:
-            strip = strip.crop_extend(scroll_x, scroll_x + width, None)
+            # Use the widget's background style to fill the entire line width
+            strip = strip.crop_extend(scroll_x, scroll_x + width, self.rich_style)
 
         if self.show_gutter or self.show_line_numbers:
             line_number_style = self.get_component_rich_style(
@@ -970,9 +1042,21 @@ class LogLines(ScrollView, inherit_bindings=False):
                 self.pointer_line = None
 
     def update_line_count(self) -> None:
-        line_count = len(self._line_breaks.get(self.log_file, []))
-        line_count = max(1, line_count)
-        self._line_count = line_count
+        if self._merge_lines is not None:
+            # For merged view, line count is the length of merged lines
+            self._line_count = max(1, len(self._merge_lines))
+        else:
+            line_count = len(self._line_breaks.get(self.log_file, []))
+            line_count = max(1, line_count)
+            self._line_count = line_count
+
+    def _get_timestamp_for_line(self, log_file: LogFile, start: int, end: int) -> float:
+        """Get timestamp as float for sorting merged lines."""
+        line = log_file.get_line(start, end)
+        timestamp = log_file.timestamp_scanner.scan(line)
+        if timestamp:
+            return timestamp.timestamp()
+        return time.time()  # Use current time if no timestamp found
 
     @on(NewBreaks)
     def on_new_breaks(self, event: NewBreaks) -> None:
@@ -984,9 +1068,25 @@ class LogLines(ScrollView, inherit_bindings=False):
         if not self.tail and event.tail:
             self.post_message(PendingLines(len(line_breaks) - self._line_count + 1))
 
-        line_breaks.extend(event.breaks)
-        if not event.tail:
-            line_breaks.sort()
+        # Handle merged mode: insert new lines in sorted order
+        if self._merge_lines is not None and event.tail:
+            # For tailing in merged mode, we need to insert lines sorted by timestamp
+            prev_break = line_breaks[-1] if line_breaks else 0
+            for break_pos in event.breaks:
+                line_breaks.append(break_pos)
+                # Get the line index within this file
+                line_index = len(line_breaks) - 1
+                # Get timestamp for sorting
+                ts = self._get_timestamp_for_line(event.log_file, prev_break, break_pos)
+                # Insert into merge_lines maintaining sort order
+                entry = (ts, line_index, event.log_file)
+                bisect.insort(self._merge_lines, entry)
+                prev_break = break_pos
+        else:
+            # Non-merged mode or initial scan
+            line_breaks.extend(event.breaks)
+            if not event.tail:
+                line_breaks.sort()
 
         pointer_distance_from_end = (
             None if self.pointer_line is None else self.virtual_size.height - self.pointer_line
@@ -995,6 +1095,10 @@ class LogLines(ScrollView, inherit_bindings=False):
 
         if not event.tail or self.tail or first:
             self.update_line_count()
+
+        # Clear render cache to pick up new lines
+        if event.tail:
+            self._render_line_cache.clear()
 
         if self.tail:
             if self.pointer_line is not None and pointer_distance_from_end is not None:
@@ -1025,7 +1129,8 @@ class LogLines(ScrollView, inherit_bindings=False):
         self._scan_start = event.scan_start
         self.update_line_count()
         self.refresh()
-        if len(self.log_files) == 1 and self.can_tail:
+        # Start tail for both single files and merged files
+        if self.can_tail:
             self.start_tail()
 
     @on(ScanProgress)
