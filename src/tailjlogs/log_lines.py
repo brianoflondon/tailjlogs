@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import bisect
+import json
 import mmap
 import platform
 import re
@@ -48,6 +49,20 @@ MAX_LINE_LENGTH = 1000
 
 # Filename prefix settings for merged view
 FILENAME_PREFIX_WIDTH = 15
+
+# Log level hierarchy (higher number = more severe)
+LOG_LEVEL_ORDER = {
+    "DEBUG": 10,
+    "INFO": 20,
+    "WARNING": 30,
+    "WARN": 30,
+    "ERROR": 40,
+    "CRITICAL": 50,
+    "FATAL": 50,
+}
+
+# Common field names for log level in JSON
+LEVEL_FIELDS = ["level", "levelname", "severity", "log_level", "loglevel"]
 FILENAME_SEPARATOR = " │ "
 
 # Colors for different files in merged view (cycle through these)
@@ -219,10 +234,19 @@ class LogLines(ScrollView, inherit_bindings=False):
     can_tail: reactive[bool] = reactive(True)
     show_line_numbers: reactive[bool] = reactive(False)
 
-    def __init__(self, watcher: WatcherBase, file_paths: list[str]) -> None:
+    def __init__(
+        self,
+        watcher: WatcherBase,
+        file_paths: list[str],
+        max_lines: int | None = None,
+        min_level: str | None = None,
+    ) -> None:
         super().__init__()
         self.watcher = watcher
         self.file_paths = file_paths
+        self.max_lines = max_lines
+        self.min_level = min_level
+        self.min_level_value = LOG_LEVEL_ORDER.get(min_level.upper(), 0) if min_level else 0
         self.log_files = [LogFile(path) for path in file_paths]
         self._render_line_cache: LRUCache[tuple[LogFile, int, int, bool, str], Strip] = LRUCache(
             maxsize=1000
@@ -296,6 +320,39 @@ class LogLines(ScrollView, inherit_bindings=False):
                 return self.filter_text in line
             else:
                 return self.filter_text.lower() in line.lower()
+
+    def _check_level_match(self, line: str) -> bool:
+        """Check if a line meets the minimum log level requirement.
+
+        Returns True if:
+        - No min_level is set
+        - Line is not JSON or has no level field
+        - Line's level >= min_level
+        """
+        if not self.min_level_value:
+            return True
+        if not line:
+            return True
+
+        try:
+            data = json.loads(line.strip())
+            if not isinstance(data, dict):
+                return True
+
+            # Try to find level field
+            level_str = None
+            for field in LEVEL_FIELDS:
+                if field in data:
+                    level_str = str(data[field]).upper()
+                    break
+
+            if not level_str:
+                return True  # No level field, include by default
+
+            line_level_value = LOG_LEVEL_ORDER.get(level_str, 0)
+            return line_level_value >= self.min_level_value
+        except (json.JSONDecodeError, ValueError):
+            return True  # Not JSON, include by default
 
     def _rebuild_filtered_indices(self) -> None:
         """Rebuild the filtered indices based on current filter."""
@@ -475,7 +532,13 @@ class LogLines(ScrollView, inherit_bindings=False):
             append = line_breaks.append
             meta: list[tuple[float, int, LogFile]] = []
             append_meta = meta.append
-            for timestamps in log_file.scan_timestamps():
+
+            # Create level filter if min_level is set
+            level_filter = self._check_level_match if self.min_level else None
+
+            for timestamps in log_file.scan_timestamps(
+                max_lines=self.max_lines, level_filter=level_filter
+            ):
                 break_position = 0
 
                 for line_no, break_position, timestamp in timestamps:

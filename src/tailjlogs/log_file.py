@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime
-import os
-import mmap
 import mimetypes
+import mmap
+import os
 import platform
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import IO, Iterable
 from threading import Event, Lock
+from typing import IO, Callable, Iterable
 
 import rich.repr
 
 from tailjlogs.format_parser import FormatParser, ParseResult
 from tailjlogs.timestamps import TimestampScanner
-
 
 IS_WINDOWS = platform.system() == "Windows"
 
@@ -151,15 +150,10 @@ class LogFile:
 
     def get_line(self, start: int, end: int) -> str:
         return (
-            self.get_raw(start, end)
-            .decode("utf-8", errors="replace")
-            .strip("\n\r")
-            .expandtabs(4)
+            self.get_raw(start, end).decode("utf-8", errors="replace").strip("\n\r").expandtabs(4)
         )
 
-    def scan_line_breaks(
-        self, batch_time: float = 0.25
-    ) -> Iterable[tuple[int, list[int]]]:
+    def scan_line_breaks(self, batch_time: float = 0.25) -> Iterable[tuple[int, list[int]]]:
         """Scan the file for line breaks.
 
         Args:
@@ -200,8 +194,18 @@ class LogFile:
             log_mmap.close()
 
     def scan_timestamps(
-        self, batch_time: float = 0.25
+        self,
+        batch_time: float = 0.25,
+        max_lines: int | None = None,
+        level_filter: Callable[[str], bool] | None = None,
     ) -> Iterable[list[tuple[int, int, float]]]:
+        """Scan file for timestamps.
+
+        Args:
+            batch_time: Time between yielding batches.
+            max_lines: If set, only scan the last N lines (for performance with large files).
+            level_filter: Optional callable that takes a line and returns True if it should be included.
+        """
         size = self.size
         if not size:
             return
@@ -211,28 +215,73 @@ class LogFile:
         else:
             log_mmap = mmap.mmap(fileno, size, prot=mmap.PROT_READ)
 
-        monotonic = time.monotonic
-        scan_time = monotonic()
-        scan = self.timestamp_scanner.scan
-        line_no = 0
-        position = 0
-        results: list[tuple[int, int, float]] = []
-        append = results.append
-        get_length = results.__len__
-        while line_bytes := log_mmap.readline():
-            line = line_bytes.decode("utf-8", errors="replace")
-            timestamp = scan(line)
-            position += len(line_bytes)
-            append((line_no, position, timestamp.timestamp() if timestamp else 0.0))
-            line_no += 1
-            if (
-                results
-                and get_length() % 1000 == 0
-                and monotonic() - scan_time > batch_time
-            ):
-                scan_time = monotonic()
+        try:
+            # If max_lines is set, find the starting position for the last N lines
+            start_position = 0
+            if max_lines is not None and max_lines > 0:
+                start_position = self._find_tail_start(log_mmap, size, max_lines)
+
+            monotonic = time.monotonic
+            scan_time = monotonic()
+            scan = self.timestamp_scanner.scan
+            line_no = 0
+            position = start_position
+
+            # Seek to start position
+            log_mmap.seek(start_position)
+
+            results: list[tuple[int, int, float]] = []
+            append = results.append
+            get_length = results.__len__
+            while line_bytes := log_mmap.readline():
+                line = line_bytes.decode("utf-8", errors="replace")
+                position += len(line_bytes)
+
+                # Apply level filter if provided
+                if level_filter is not None and not level_filter(line):
+                    continue
+
+                timestamp = scan(line)
+                append((line_no, position, timestamp.timestamp() if timestamp else 0.0))
+                line_no += 1
+                if results and get_length() % 1000 == 0 and monotonic() - scan_time > batch_time:
+                    scan_time = monotonic()
+                    yield results
+                    results = []
+                    append = results.append
+            if results:
                 yield results
-                results = []
-                append = results.append
-        if results:
-            yield results
+        finally:
+            log_mmap.close()
+
+    def _find_tail_start(self, log_mmap: mmap.mmap, size: int, max_lines: int) -> int:
+        """Find the byte position to start reading to get approximately the last N lines.
+
+        Args:
+            log_mmap: Memory-mapped file.
+            size: Total file size.
+            max_lines: Number of lines to include.
+
+        Returns:
+            Byte offset to start reading from.
+        """
+        # Estimate average line length (assume ~200 bytes for JSONL, add buffer)
+        estimated_bytes_per_line = 300
+        estimated_start = max(0, size - (max_lines * estimated_bytes_per_line))
+
+        # Search backwards from estimated position to find actual line breaks
+        # We want to find max_lines newlines from the end
+        rfind = log_mmap.rfind
+        position = size
+        lines_found = 0
+
+        while lines_found < max_lines and position > 0:
+            new_pos = rfind(b"\n", 0, position)
+            if new_pos == -1:
+                # No more newlines, start from beginning
+                return 0
+            position = new_pos
+            lines_found += 1
+
+        # Position is at a newline, so start reading from the next character
+        return position + 1 if position > 0 else 0

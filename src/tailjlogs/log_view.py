@@ -286,15 +286,26 @@ class LogView(Horizontal):
     tail: reactive[bool] = reactive(False)
     can_tail: reactive[bool] = reactive(True)
 
-    def __init__(self, file_paths: list[str], watcher: WatcherBase, can_tail: bool = True) -> None:
+    def __init__(
+        self,
+        file_paths: list[str],
+        watcher: WatcherBase,
+        can_tail: bool = True,
+        max_lines: int | None = None,
+        min_level: str | None = None,
+    ) -> None:
         self.file_paths = file_paths
         self.watcher = watcher
+        self.max_lines = max_lines
+        self.min_level = min_level
         super().__init__()
         self.can_tail = can_tail
 
     def compose(self) -> ComposeResult:
         yield (
-            log_lines := LogLines(self.watcher, self.file_paths).data_bind(
+            log_lines := LogLines(
+                self.watcher, self.file_paths, max_lines=self.max_lines, min_level=self.min_level
+            ).data_bind(
                 LogView.tail,
                 LogView.show_line_numbers,
                 LogView.show_find,
