@@ -14,8 +14,22 @@
                 "INFO",
                 "../v4vapp-backend-v2/logs/dev-logs/hive_monitor_v2.jsonl"
             ],
-            "console": "externalTerminal",
+            "console": "integratedTerminal",
             "consoleName": "tl --level info",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug tl --level INFO hive_monitor_v2.jsonl (externalTerminal)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/tailjlogs/cli.py",
+            "args": [
+                "--level",
+                "INFO",
+                "../v4vapp-backend-v2/logs/dev-logs/hive_monitor_v2.jsonl"
+            ],
+            "console": "externalTerminal",
+            "cwd": "${workspaceFolder}"
+        }
     ]
 }
