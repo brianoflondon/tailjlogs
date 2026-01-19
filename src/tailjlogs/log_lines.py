@@ -256,6 +256,9 @@ class LogLines(ScrollView, inherit_bindings=False):
         self._suggester = SearchSuggester(self._search_index)
         self.icons: dict[int, str] = {}
         self._line_breaks: dict[LogFile, list[int]] = {}
+        self._tail_positions: dict[
+            LogFile, int
+        ] = {}  # Track last scanned position per file for tailing
         self._line_cache: LRUCache[tuple[LogFile, int, int], str] = LRUCache(10000)
         self._text_cache: LRUCache[
             tuple[LogFile, int, int, bool], tuple[str, Text, datetime | None]
@@ -355,8 +358,9 @@ class LogLines(ScrollView, inherit_bindings=False):
             return True  # Not JSON, include by default
 
     def _rebuild_filtered_indices(self) -> None:
-        """Rebuild the filtered indices based on current filter."""
-        if not self.filter_text:
+        """Rebuild the filtered indices based on current filter and level."""
+        # Only build filtered indices if we have text filter OR level filter
+        if not self.filter_text and not self.min_level:
             self._filtered_indices = None
             self._render_line_cache.clear()
             self.refresh()
@@ -369,8 +373,16 @@ class LogLines(ScrollView, inherit_bindings=False):
             for line_no in range(raw_count):
                 log_file, start, end = self._index_to_span_raw(line_no)
                 line = log_file.get_raw(start, end).decode("utf-8", errors="replace")
-                if self._check_filter_match(line):
-                    filtered.append(line_no)
+
+                # Check level filter first (if set)
+                if self.min_level and not self._check_level_match(line):
+                    continue
+
+                # Check text filter (if set)
+                if self.filter_text and not self._check_filter_match(line):
+                    continue
+
+                filtered.append(line_no)
 
             self._filtered_indices = filtered
 
@@ -379,18 +391,24 @@ class LogLines(ScrollView, inherit_bindings=False):
         self.pointer_line = None
         self.refresh()
 
+    def _apply_level_filter(self) -> None:
+        """Build filtered indices based on log level after initial scan."""
+        if not self.min_level:
+            return
+        self._rebuild_filtered_indices()
+
     def watch_filter_text(self, filter_text: str) -> None:
         """Called when filter_text changes."""
         self._rebuild_filtered_indices()
 
     def watch_filter_regex(self, filter_regex: bool) -> None:
         """Called when filter_regex changes."""
-        if self.filter_text:
+        if self.filter_text or self.min_level:
             self._rebuild_filtered_indices()
 
     def watch_filter_case_sensitive(self, filter_case_sensitive: bool) -> None:
         """Called when filter_case_sensitive changes."""
-        if self.filter_text:
+        if self.filter_text or self.min_level:
             self._rebuild_filtered_indices()
 
     @property
@@ -467,6 +485,7 @@ class LogLines(ScrollView, inherit_bindings=False):
     def run_scan(self, save_merge: str | None = None) -> None:
         worker = get_current_worker()
 
+        # Use merge mode for multiple files
         if len(self.log_files) > 1:
             self.merge_log_files()
             if save_merge is not None:
@@ -533,28 +552,27 @@ class LogLines(ScrollView, inherit_bindings=False):
             meta: list[tuple[float, int, LogFile]] = []
             append_meta = meta.append
 
-            # Create level filter if min_level is set
-            level_filter = self._check_level_match if self.min_level else None
+            for timestamps in log_file.scan_timestamps(max_lines=self.max_lines):
+                end_position = 0
 
-            for timestamps in log_file.scan_timestamps(
-                max_lines=self.max_lines, level_filter=level_filter
-            ):
-                break_position = 0
-
-                for line_no, break_position, timestamp in timestamps:
+                for line_no, start_position, end_position, timestamp in timestamps:
                     append_meta((timestamp, line_no, log_file))
-                    append(break_position)
-                append(log_file.size)
+                    # Store both start and end positions as pairs (start, end, start, end, ...)
+                    append(start_position)
+                    append(end_position)
 
                 self.post_message(
                     ScanProgress(
                         f"Merging {log_file.name} - ESCAPE to cancel",
-                        (position + break_position) / total_size,
+                        (position + end_position) / total_size,
                     )
                 )
                 if worker.is_cancelled:
-                    self.post_message(ScanComplete(total_size, position + break_position))
+                    self.post_message(ScanComplete(total_size, position + end_position))
                     return
+
+            # Track the actual file end for tailing
+            self._tail_positions[log_file] = log_file.size
 
             # Header may be missing timestamp, so we will attempt to back fill timestamps
             seconds = 0.0
@@ -633,15 +651,29 @@ class LogLines(ScrollView, inherit_bindings=False):
         """Convert a raw (unfiltered) line index to a span. Used internally."""
         log_file, index = self.get_log_file_from_index(index)
         line_breaks = self._line_breaks.setdefault(log_file, [])
-        scan_start = 0 if self._merge_lines else self._scan_start
-        if not line_breaks:
-            return (log_file, scan_start, self._scan_start)
-        index = clamp(index, 0, len(line_breaks))
-        if index == 0:
-            return (log_file, scan_start, line_breaks[0])
-        start = line_breaks[index - 1]
-        end = line_breaks[index] if index < len(line_breaks) else max(0, self._scanned_size - 1)
-        return (log_file, start, end)
+
+        if self._merge_lines is not None:
+            # Merged mode: line_breaks = [start0, end0, start1, end1, ...]
+            # For line i: start = line_breaks[i*2], end = line_breaks[i*2+1]
+            pos = index * 2
+            if not line_breaks or pos + 1 >= len(line_breaks):
+                return (log_file, 0, 0)
+            start = line_breaks[pos]
+            end = line_breaks[pos + 1]
+            return (log_file, start, end)
+        else:
+            # Non-merged mode: line_breaks stores end positions (scanned backwards)
+            scan_start = self._scan_start
+            if not line_breaks:
+                return (log_file, scan_start, self._scan_start)
+            index = clamp(index, 0, len(line_breaks))
+            if index == 0:
+                return (log_file, scan_start, line_breaks[0])
+            start = line_breaks[index - 1]
+            end = (
+                line_breaks[index] if index < len(line_breaks) else max(0, self._scanned_size - 1)
+            )
+            return (log_file, start, end)
 
     def index_to_span(self, index: int) -> tuple[LogFile, int, int]:
         """Convert a display index to a span, handling filtering."""
@@ -1134,17 +1166,38 @@ class LogLines(ScrollView, inherit_bindings=False):
         # Handle merged mode: insert new lines in sorted order
         if self._merge_lines is not None and event.tail:
             # For tailing in merged mode, we need to insert lines sorted by timestamp
-            prev_break = line_breaks[-1] if line_breaks else 0
+            # line_breaks stores [start0, end0, start1, end1, ...] pairs
+            prev_end = self._tail_positions.get(event.log_file, 0)
             for break_pos in event.breaks:
-                line_breaks.append(break_pos)
-                # Get the line index within this file
-                line_index = len(line_breaks) - 1
+                # break_pos is position OF the newline character
+                # We need: start = byte after previous newline, end = byte after this newline
+                start_pos = prev_end
+                end_pos = break_pos + 1
+
+                # Store as pair (start, end)
+                line_breaks.append(start_pos)
+                line_breaks.append(end_pos)
+                # Get the line index within this file (pairs, so divide by 2)
+                line_index = (len(line_breaks) // 2) - 1
                 # Get timestamp for sorting
-                ts = self._get_timestamp_for_line(event.log_file, prev_break, break_pos)
+                ts = self._get_timestamp_for_line(event.log_file, start_pos, end_pos)
                 # Insert into merge_lines maintaining sort order
                 entry = (ts, line_index, event.log_file)
                 bisect.insort(self._merge_lines, entry)
-                prev_break = break_pos
+
+                # If level filtering is active, check if this new line should be included
+                if self._filtered_indices is not None:
+                    line = event.log_file.get_line(start_pos, end_pos)
+                    if self._check_level_match(line) and (
+                        not self.filter_text or self._check_filter_match(line)
+                    ):
+                        # Add to filtered indices (new lines go at the end based on merge position)
+                        new_display_index = len(self._merge_lines) - 1
+                        self._filtered_indices.append(new_display_index)
+
+                prev_end = end_pos
+            # Update tail position for next batch
+            self._tail_positions[event.log_file] = prev_end
         else:
             # Non-merged mode or initial scan
             line_breaks.extend(event.breaks)
@@ -1191,6 +1244,11 @@ class LogLines(ScrollView, inherit_bindings=False):
         self._scanned_size = max(self._scanned_size, event.size)
         self._scan_start = event.scan_start
         self.update_line_count()
+
+        # Apply level filter after scan completes (if set)
+        if self.min_level:
+            self._apply_level_filter()
+
         self.refresh()
         # Start tail for both single files and merged files
         if self.can_tail:
