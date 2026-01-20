@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug tl --level INFO hive_monitor_v2.jsonl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/tailjlogs/cli.py",
+            "args": [
+                "--level",
+                "INFO",
+                "../v4vapp-backend-v2/logs/dev-logs/hive_monitor_v2.jsonl"
+            ],
+            "console": "integratedTerminal",
+            "consoleName": "tl --level info",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug tl --level INFO hive_monitor_v2.jsonl (externalTerminal)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/tailjlogs/cli.py",
+            "args": [
+                "--level",
+                "INFO",
+                "../v4vapp-backend-v2/logs/dev-logs/hive_monitor_v2.jsonl"
+            ],
+            "console": "externalTerminal",
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

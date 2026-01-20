@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from threading import Event, Lock
-from typing import IO, Callable, Iterable
+from typing import IO, Iterable
 
 import rich.repr
 
@@ -197,14 +197,12 @@ class LogFile:
         self,
         batch_time: float = 0.25,
         max_lines: int | None = None,
-        level_filter: Callable[[str], bool] | None = None,
     ) -> Iterable[list[tuple[int, int, float]]]:
         """Scan file for timestamps.
 
         Args:
             batch_time: Time between yielding batches.
             max_lines: If set, only scan the last N lines (for performance with large files).
-            level_filter: Optional callable that takes a line and returns True if it should be included.
         """
         size = self.size
         if not size:
@@ -226,23 +224,24 @@ class LogFile:
             scan = self.timestamp_scanner.scan
             line_no = 0
             position = start_position
+            line_start = start_position  # Track where each line starts
 
             # Seek to start position
             log_mmap.seek(start_position)
 
-            results: list[tuple[int, int, float]] = []
+            results: list[tuple[int, int, int, float]] = []
             append = results.append
             get_length = results.__len__
             while line_bytes := log_mmap.readline():
                 line = line_bytes.decode("utf-8", errors="replace")
-                position += len(line_bytes)
-
-                # Apply level filter if provided
-                if level_filter is not None and not level_filter(line):
-                    continue
+                line_start = position  # Start of this line
+                position += len(line_bytes)  # End of this line
 
                 timestamp = scan(line)
-                append((line_no, position, timestamp.timestamp() if timestamp else 0.0))
+                # Return (line_no, start_position, end_position, timestamp)
+                append(
+                    (line_no, line_start, position, timestamp.timestamp() if timestamp else 0.0)
+                )
                 line_no += 1
                 if results and get_length() % 1000 == 0 and monotonic() - scan_time > batch_time:
                     scan_time = monotonic()
