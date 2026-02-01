@@ -59,18 +59,12 @@ class LogGroupSummary:
         if not self.level_counts:
             return "N/A"
 
-        levels_present = [
-            level
-            for level in self.level_counts
-            if level.upper() in LOG_LEVEL_ORDER
-        ]
+        levels_present = [level for level in self.level_counts if level.upper() in LOG_LEVEL_ORDER]
         if not levels_present:
             return "N/A"
 
         # Sort by severity order
-        sorted_levels = sorted(
-            levels_present, key=lambda x: LOG_LEVEL_ORDER.get(x.upper(), 0)
-        )
+        sorted_levels = sorted(levels_present, key=lambda x: LOG_LEVEL_ORDER.get(x.upper(), 0))
         min_level = sorted_levels[0]
         max_level = sorted_levels[-1]
 
@@ -313,8 +307,12 @@ def format_summary_text(summaries: list[LogGroupSummary]) -> str:
             lines.append(f"          - {f}")
         lines.append(f"   Total Lines: {summary.total_lines:,}")
         lines.append("")
-        lines.append(f"   First Log: {summary.first_log.strftime('%Y-%m-%d %H:%M:%S') if summary.first_log else 'N/A'}")
-        lines.append(f"   Last Log:  {summary.last_log.strftime('%Y-%m-%d %H:%M:%S') if summary.last_log else 'N/A'}")
+        lines.append(
+            f"   First Log: {summary.first_log.strftime('%Y-%m-%d %H:%M:%S') if summary.first_log else 'N/A'}"
+        )
+        lines.append(
+            f"   Last Log:  {summary.last_log.strftime('%Y-%m-%d %H:%M:%S') if summary.last_log else 'N/A'}"
+        )
         lines.append(f"   Timespan:  {format_timedelta(summary.timespan)}")
         lines.append("")
         lines.append(f"   Level Range: {summary.level_range}")
