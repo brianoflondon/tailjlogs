@@ -29,6 +29,7 @@
 | `watcher.py` | File watching abstraction |
 | `messages.py` | Textual message types |
 | `help.py` | Help screen |
+| `summary.py` | Log file summary/statistics (--summary mode) |
 
 ### Key Classes
 
@@ -36,6 +37,7 @@
 - `LogLines` in `log_lines.py` - Main scrollable widget for log display
 - `LinePanel` in `line_panel.py` - Shows full JSON when pressing Enter
 - `FindDialog` in `find_dialog.py` - Find and Filter functionality
+- `LogGroupSummary` in `summary.py` - Dataclass for log file group statistics
 
 ### Dependencies
 

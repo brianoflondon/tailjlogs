@@ -9,6 +9,14 @@
 
 ![TailJLogs Screenshot](https://github.com/brianoflondon/tailjlogs/assets/screenshot.png)
 
+## What's New in v2.4
+
+- **Log Summary Mode**: New `--summary` flag to scan and summarize log files
+  - Groups rotated log files by base name (e.g., `app.001.jsonl`, `app.002.jsonl` → `app`)
+  - Reports first/last log timestamps, timespan, and log level counts
+  - Supports JSON output with `--json` flag
+  - Recursive/non-recursive directory scanning with `-r`/`--no-recursive`
+
 ## What's New in v2.1
 
 - **Merged File Tailing**: Now you can tail multiple merged files simultaneously (`Ctrl+T`)
@@ -36,6 +44,7 @@ TailJLogs v2.0 is a complete rewrite based on the excellent [Toolong](https://gi
 - 🔍 **Find** (`/` or `Ctrl+F`): Highlight matching lines
 - 🔎 **Filter** (`\`): Show only matching lines
 - 📁 **Glob patterns**: `*.jsonl`, `logs/**/*.log`, directories
+- 📊 **Summary mode**: Scan directories and report log statistics
 
 ## Installation
 
@@ -84,6 +93,32 @@ tl /var/log/myapp/            # Directory (finds all log files)
 # Merge and tail (docker-compose style output)
 tl --merge *.jsonl
 # Then press Ctrl+T to start tailing
+
+# Summary mode - scan and report log statistics
+tl --summary .                     # Current directory
+tl --summary /var/log/myapp/       # Specific directory
+tl --summary logs/ --json          # Output as JSON
+tl --summary logs/ --no-recursive  # Don't search subdirectories
+```
+
+### Summary Mode Output
+
+```
+📁 api_v2
+------------------------------------------------------------
+   Files: 2
+          - api_v2.jsonl
+          - rotation/api_v2.001.jsonl
+   Total Lines: 2,360
+
+   First Log: 2026-01-31 04:49:56
+   Last Log:  2026-02-01 08:01:47
+   Timespan:  1d 3h 11m 51s
+
+   Level Range: DEBUG to INFO
+   Level Counts:
+      DEBUG      :    1,579
+      INFO       :      781
 ```
 
 ### Merged View with Filename Prefix
