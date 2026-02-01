@@ -8,6 +8,7 @@ from pathlib import Path
 
 import click
 
+from tailjlogs.summary import format_summary_json, format_summary_text, summarize_logs
 from tailjlogs.ui import UI
 
 
@@ -92,8 +93,33 @@ def expand_file_patterns(patterns: tuple[str, ...]) -> list[str]:
     default=None,
     help="Filter by minimum log level (e.g., INFO shows INFO, WARNING, ERROR, CRITICAL).",
 )
+@click.option(
+    "-s",
+    "--summary",
+    is_flag=True,
+    help="Show summary of log files in the given path(s) instead of viewing them.",
+)
+@click.option(
+    "--json",
+    "json_output",
+    is_flag=True,
+    help="Output summary as JSON (only with --summary).",
+)
+@click.option(
+    "-r",
+    "--recursive/--no-recursive",
+    default=True,
+    help="Search subdirectories recursively (default: recursive). Only with --summary.",
+)
 def run(
-    files: tuple[str, ...], merge: bool, output_merge: str, lines: int | None, level: str | None
+    files: tuple[str, ...],
+    merge: bool,
+    output_merge: str,
+    lines: int | None,
+    level: str | None,
+    summary: bool,
+    json_output: bool,
+    recursive: bool,
 ) -> None:
     """View / tail / search log files.
 
@@ -105,7 +131,25 @@ def run(
         tl logs/                        # All log files in logs/ directory
         tl "logs/**/*.jsonl"            # Recursive glob (quote to prevent shell expansion)
         tl app.log error.log --merge    # Merge multiple files
+        tl --summary .                  # Show summary of all log files in current directory
+        tl --summary logs/ --json       # Show summary as JSON
     """
+    # Handle summary mode
+    if summary:
+        paths = [Path(f) for f in files] if files else [Path(".")]
+        all_summaries = []
+        for path in paths:
+            if path.exists():
+                summaries = summarize_logs(path, recursive=recursive)
+                all_summaries.extend(summaries)
+            else:
+                click.echo(f"Warning: Path does not exist: {path}", err=True)
+
+        if json_output:
+            click.echo(format_summary_json(all_summaries))
+        else:
+            click.echo(format_summary_text(all_summaries))
+        return
     stdin_tty = sys.__stdin__.isatty()
 
     # Expand glob patterns and directories

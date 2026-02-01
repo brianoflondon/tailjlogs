@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.4.0] - 2026-02-01
+
+### Added
+- **feat:** New `--summary` / `-s` CLI option to scan and summarize log files in a directory.
+- **feat:** Groups rotated log files by base filename (e.g., `app.001.jsonl`, `app.002.jsonl` → `app`).
+- **feat:** Reports first/last log timestamps, total timespan, and log level distribution.
+- **feat:** New `--json` flag to output summary as JSON for programmatic use.
+- **feat:** New `-r` / `--recursive` / `--no-recursive` option to control subdirectory scanning.
+- **feat:** New `summary.py` module with `LogGroupSummary` dataclass and scanning utilities.
+- **test:** Comprehensive test suite for summary functionality in `test_summary.py`.
+- **test:** Local data tests marked to skip on GitHub Actions.
+
 ## [2.3.0] - 2026-01-18
 
 ### Added
