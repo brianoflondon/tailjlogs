@@ -7,7 +7,7 @@
 >
 > A terminal application to view, tail, merge, and search log files with **enhanced JSONL support**.
 
-![TailJLogs Screenshot](https://github.com/brianoflondon/tailjlogs/assets/screenshot.png)
+![TailJLogs Screenshot](https://images.hive.blog/0x0/https://files.peakd.com/file/peakd-hive/brianoflondon/Eo6BoTCAqz5uSEgzXz9gWKtR5NDHQAhfFoMjpe7NyNgj1Crwsmv2dTt8c4fd583h3Ye.png)
 
 ## What's New in v2.4
 
