@@ -41,6 +41,7 @@ Repository: [https://github.com/brianoflondon/tailjlogs](https://github.com/bria
 - `\\` Show filter dialog.
 - `ctrl+l` Toggle line numbers.
 - `ctrl+t` Tail current file.
+- `cmd+c` (macOS) or `ctrl+shift+c` Copy JSON detail (when panel is open). Press `y` to toggle copy format (Pretty/Raw), default **Pretty**.
 - `ctrl+c` Exit the app.
 
 ### Find

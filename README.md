@@ -155,6 +155,7 @@ db_monitor      │ 01-15T09:36:38.210 DEBUG db      89 : Query executed
 | `Enter`         | Toggle pointer mode / View JSON detail |
 | `Ctrl+L`        | Toggle line numbers                    |
 | `Ctrl+T`        | Tail current file                      |
+| `⌘C` or `Ctrl+Shift+C` | Copy JSON detail (when panel open); press `y` to toggle Pretty/Raw |
 | `?`             | Show help                              |
 | `Ctrl+C` or `q` | Exit                                   |
 
