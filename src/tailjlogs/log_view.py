@@ -105,7 +105,10 @@ MAX_DETAIL_LINE_LENGTH = 100_000
 
 
 class KeyDebug(Widget):
-    """Temporary overlay to display the last key event received (for debugging)."""
+    """Temporary overlay to display the last key event received (for debugging).
+
+    Shows the last key event and auto-hides after `hide_timeout` seconds of
+    inactivity (default 3s)."""
 
     DEFAULT_CSS = """
     KeyDebug {
@@ -132,9 +135,29 @@ class KeyDebug(Widget):
     """
 
     message = reactive("")
+    hide_timeout: reactive[float] = reactive(3.0)
+    # Bound from LogView to control visibility
+    show_key_debug: reactive[bool] = reactive(False)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._hide_timer = None
+
+    def watch_show_key_debug(self, show: bool) -> None:
+        # toggle visible class when bound attribute changes
+        self.set_class(show, "visible")
 
     def compose(self) -> ComposeResult:
         yield Label("", classes="message")
+
+    def _clear_message(self) -> None:
+        self.message = ""
+        if self._hide_timer is not None:
+            try:
+                self._hide_timer.stop()
+            except Exception:
+                pass
+            self._hide_timer = None
 
     def watch_message(self, message: str) -> None:
         # Only update the label if the widget is mounted and a Label child exists.
@@ -146,9 +169,25 @@ class KeyDebug(Widget):
             # No Label present yet or query failed; ignore for now.
             pass
 
+        # Cancel any existing timer and set a new one when message is non-empty
+        if self._hide_timer is not None:
+            try:
+                self._hide_timer.stop()
+            except Exception:
+                pass
+            self._hide_timer = None
+
+        if message:
+            # Schedule auto-hide after hide_timeout seconds
+            try:
+                self._hide_timer = self.set_timer(self.hide_timeout, self._clear_message)
+            except Exception:
+                # set_timer might not be available in very old Textual versions
+                self._hide_timer = None
+
     def on_click(self) -> None:
         # Clicking clears the message
-        self.message = ""
+        self._clear_message()
 
 
 class InfoOverlay(Widget):
@@ -295,6 +334,10 @@ class LogFooter(Widget):
     timestamp: reactive[datetime | None] = reactive(None)
     tail: reactive[bool] = reactive(False)
     can_tail: reactive[bool] = reactive(False)
+    # Reflects copy mode for detail panel (False=Pretty, True=Raw)
+    copy_raw: reactive[bool] = reactive(False)
+    # Whether the detail panel is shown
+    show_panel: reactive[bool] = reactive(False)
 
     def __init__(self) -> None:
         self.lock = Lock()
@@ -350,8 +393,16 @@ class LogFooter(Widget):
         if self.line_no is not None:
             meta.append(f"{self.line_no + 1}")
 
+        # Show copy mode indicator when the detail panel is visible
+        if self.show_panel:
+            meta.append(f"Copy: {'Raw' if self.copy_raw else 'Pretty'}")
+
         meta_line = " • ".join(meta)
-        self.query_one(".meta", Label).update(meta_line)
+        # Be defensive if widget not fully mounted
+        try:
+            self.query_one(".meta", Label).update(meta_line)
+        except Exception:
+            pass
 
     def watch_tail(self, tail: bool) -> None:
         self.query(".tail").set_class(tail and self.can_tail, "on")
@@ -447,9 +498,11 @@ class LogView(Horizontal):
         yield FindDialog(log_lines._suggester)
         yield FilterDialog(log_lines._suggester)
         yield InfoOverlay().data_bind(LogView.tail)
-        yield LogFooter().data_bind(LogView.tail, LogView.can_tail)
+        yield LogFooter().data_bind(
+            LogView.tail, LogView.can_tail, LogView.copy_raw, LogView.show_panel
+        )
         # Key debug overlay (toggleable)
-        yield KeyDebug()
+        yield KeyDebug().data_bind(LogView.show_key_debug)
 
     @on(FindDialog.Update)
     def find_dialog_update(self, event: FindDialog.Update) -> None:

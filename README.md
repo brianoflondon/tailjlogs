@@ -9,9 +9,10 @@
 
 ![TailJLogs Screenshot](https://images.hive.blog/0x0/https://files.peakd.com/file/peakd-hive/brianoflondon/Eo6BoTCAqz5uSEgzXz9gWKtR5NDHQAhfFoMjpe7NyNgj1Crwsmv2dTt8c4fd583h3Ye.png)
 
-## What's New in v2.4.3
+## What's New in v2.4.5
 
-- **Copy JSON to clipboard**: Press `⌘C` (macOS) or `Ctrl+Shift+C` to copy the JSON detail shown in the detail panel. Press `c` for a shorthand copy. Default format is **Pretty** (pretty-printed JSON). Press `y` to toggle between **Pretty** and **Raw** (raw JSON line) copy modes. Also includes a `Ctrl+K` debug overlay to inspect which key events the app receives (useful when terminals intercept modifier keys).
+- **Auto-hide KeyDebug overlay**: Key debug overlay (`Ctrl+K`) now auto-hides after 3 seconds of inactivity (configurable via `KeyDebug.hide_timeout`). The timer resets on each key event.
+- **Copy-mode indicator**: The footer shows `Copy: Pretty` or `Copy: Raw` when the JSON detail panel is open so you can see the active copy format at a glance.
 
 ## What's New in v2.4
 

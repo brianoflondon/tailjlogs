@@ -4,14 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
-## [2.4.3] - 2026-02-02
+## [2.4.5] - 2026-02-02
+
+### Added
+
+- **feat:** Auto-hide for KeyDebug overlay with a default 3s timeout (`KeyDebug.hide_timeout`, configurable). The overlay resets its timeout on new key events.
+- **feat:** Visual copy-mode indicator in the footer — shows `Copy: Pretty` or `Copy: Raw` whenever the JSON detail panel is visible.
+- **test:** Added tests for footer copy-mode behavior and KeyDebug timeout default.
+
+### Changed
+
+- **chore:** Data-bindings and defensive checks added to avoid runtime errors when composing widgets outside a running app.
+
+## [2.4.4] - 2026-02-02
 
 ### Added
 
 - **feat:** Copy JSON detail to system clipboard with `⌘C` (macOS) or `Ctrl+Shift+C` (cross-platform). Default format is **Pretty** (pretty-printed JSON).
 - **feat:** Toggle copy format between **Pretty** and **Raw** with `y` (prints raw JSON line unchanged).
 - **test:** Unit tests for clipboard helper and JSON formatting.
-- **feat:** Added `Ctrl+K` debug overlay to inspect key events sent to the app (useful for diagnosing terminal/OS key forwarding).
 
 ## [2.4.2] - 2026-02-02
 
