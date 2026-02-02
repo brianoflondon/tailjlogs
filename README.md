@@ -9,6 +9,10 @@
 
 ![TailJLogs Screenshot](https://images.hive.blog/0x0/https://files.peakd.com/file/peakd-hive/brianoflondon/Eo6BoTCAqz5uSEgzXz9gWKtR5NDHQAhfFoMjpe7NyNgj1Crwsmv2dTt8c4fd583h3Ye.png)
 
+## What's New in v2.4.3
+
+- **Copy JSON to clipboard**: Press `⌘C` (macOS) or `Ctrl+Shift+C` to copy the JSON detail shown in the detail panel. Press `c` for a shorthand copy. Default format is **Pretty** (pretty-printed JSON). Press `y` to toggle between **Pretty** and **Raw** (raw JSON line) copy modes. Also includes a `Ctrl+K` debug overlay to inspect which key events the app receives (useful when terminals intercept modifier keys).
+
 ## What's New in v2.4
 
 - **Log Summary Mode**: New `--summary` flag to scan and summarize log files
@@ -156,6 +160,9 @@ db_monitor      │ 01-15T09:36:38.210 DEBUG db      89 : Query executed
 | `Ctrl+L`        | Toggle line numbers                    |
 | `Ctrl+T`        | Tail current file                      |
 | `⌘C` or `Ctrl+Shift+C` | Copy JSON detail (when panel open); press `y` to toggle Pretty/Raw |
+| `c`             | Copy JSON detail (shorthand for ⌘C / Ctrl+Shift+C) |
+| `y`             | Toggle copy format between Pretty and Raw |
+| `Ctrl+K`        | Toggle key-event debug overlay (shows keys Textual receives) |
 | `?`             | Show help                              |
 | `Ctrl+C` or `q` | Exit                                   |
 

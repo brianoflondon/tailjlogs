@@ -104,6 +104,53 @@ SPLIT_REGEX = r"[\s/\[\]]"
 MAX_DETAIL_LINE_LENGTH = 100_000
 
 
+class KeyDebug(Widget):
+    """Temporary overlay to display the last key event received (for debugging)."""
+
+    DEFAULT_CSS = """
+    KeyDebug {
+        display: none;
+        dock: top;
+        align: right top;
+        layer: overlay;
+        padding: 0 1;
+        margin: 1;
+        background: $panel-darken-1;
+        color: $accent;
+        border: heavy $accent;
+        width: auto;
+        height: auto;
+    }
+
+    KeyDebug .message {
+        width: auto;
+        height: auto;
+    }
+    KeyDebug.visible {
+        display: block;
+    }
+    """
+
+    message = reactive("")
+
+    def compose(self) -> ComposeResult:
+        yield Label("", classes="message")
+
+    def watch_message(self, message: str) -> None:
+        # Only update the label if the widget is mounted and a Label child exists.
+        if not getattr(self, "is_mounted", False):
+            return
+        try:
+            self.query_one(Label).update(message)
+        except Exception:
+            # No Label present yet or query failed; ignore for now.
+            pass
+
+    def on_click(self) -> None:
+        # Clicking clears the message
+        self.message = ""
+
+
 class InfoOverlay(Widget):
     """Displays text under the lines widget when there are new lines."""
 
@@ -352,6 +399,9 @@ class LogView(Horizontal):
         # Copy JSON detail to system clipboard:
         Binding("meta+c", "copy_json", "Copy JSON", key_display="⌘C"),
         Binding("ctrl+shift+c", "copy_json", "Copy JSON", key_display="^⇧C", show=False),
+        # Direct copy with plain 'c' key (handy on mac) and toggle for debug overlay
+        Binding("c", "copy_json", "Copy JSON (c)", show=False),
+        Binding("ctrl+k", "toggle_key_debug", "Key debug", key_display="^K"),
         # Toggle copy format between Pretty (default) and Raw
         Binding("y", "toggle_copy_format", "Toggle copy format", key_display="y"),
     ]
@@ -364,6 +414,8 @@ class LogView(Horizontal):
     can_tail: reactive[bool] = reactive(True)
     # When False (default) copy uses pretty-printed JSON; when True copies raw JSON line
     copy_raw: reactive[bool] = reactive(False)
+    # Key debug overlay visibility
+    show_key_debug: reactive[bool] = reactive(False)
 
     def __init__(
         self,
@@ -396,6 +448,8 @@ class LogView(Horizontal):
         yield FilterDialog(log_lines._suggester)
         yield InfoOverlay().data_bind(LogView.tail)
         yield LogFooter().data_bind(LogView.tail, LogView.can_tail)
+        # Key debug overlay (toggleable)
+        yield KeyDebug()
 
     @on(FindDialog.Update)
     def find_dialog_update(self, event: FindDialog.Update) -> None:
@@ -434,6 +488,13 @@ class LogView(Horizontal):
     async def watch_show_panel(self, show_panel: bool) -> None:
         self.set_class(show_panel, "show-panel")
         await self.update_panel()
+
+    async def watch_show_key_debug(self, show: bool) -> None:
+        try:
+            key_debug = self.query_one(KeyDebug)
+        except Exception:
+            return
+        key_debug.set_class(show, "visible")
 
     @on(FindDialog.Dismiss)
     def dismiss_find_dialog(self, event: FindDialog.Dismiss) -> None:
@@ -540,6 +601,44 @@ class LogView(Horizontal):
             self.notify("Can't tail this file", title="Tail", severity="error")
         else:
             self.tail = not self.tail
+
+    def action_toggle_key_debug(self) -> None:
+        """Toggle the key-debug overlay that shows last key events."""
+        self.show_key_debug = not self.show_key_debug
+        mode = "on" if self.show_key_debug else "off"
+        self.notify(f"Key debug: {mode}", title="Debug")
+
+    @on(events.Key)
+    def on_key_event(self, event: events.Key) -> None:
+        # Do not stop event propagation; this is purely observational.
+        if not self.show_key_debug:
+            return
+        # Try common attributes for key and modifiers; be defensive.
+        key = (
+            getattr(event, "key", None)
+            or getattr(event, "character", None)
+            or getattr(event, "key_name", None)
+            or str(event)
+        )
+        mods: list[str] = []
+        for m in ("ctrl", "shift", "meta", "alt"):
+            try:
+                if getattr(event, m, False):
+                    mods.append(m)
+            except Exception:
+                pass
+        # Some Textual versions provide a 'modifiers' tuple
+        if hasattr(event, "modifiers"):
+            try:
+                mods.extend([str(x) for x in event.modifiers])
+            except Exception:
+                pass
+        mod_text = ",".join(mods) if mods else "none"
+        message = f"Key: {key} | Mods: {mod_text}"
+        try:
+            self.query_one(KeyDebug).message = message
+        except Exception:
+            pass
 
     def action_show_find_dialog(self) -> None:
         find_dialog = self.query_one(FindDialog)
