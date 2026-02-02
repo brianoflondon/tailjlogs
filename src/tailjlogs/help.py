@@ -42,6 +42,8 @@ Repository: [https://github.com/brianoflondon/tailjlogs](https://github.com/bria
 - `ctrl+l` Toggle line numbers.
 - `ctrl+t` Tail current file.
 - `cmd+c` (macOS) or `ctrl+shift+c` Copy JSON detail (when panel is open). Press `y` to toggle copy format (Pretty/Raw), default **Pretty**.
+- `c` Copy JSON detail (when panel is open) — shorthand for `cmd+c`/`ctrl+shift+c`.
+- `ctrl+k` Toggle key-event debug overlay (shows the last key Textual received).
 - `ctrl+c` Exit the app.
 
 ### Find

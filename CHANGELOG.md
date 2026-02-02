@@ -11,6 +11,7 @@ The format is based on "Keep a Changelog" and this project adheres to Semantic V
 - **feat:** Copy JSON detail to system clipboard with `⌘C` (macOS) or `Ctrl+Shift+C` (cross-platform). Default format is **Pretty** (pretty-printed JSON).
 - **feat:** Toggle copy format between **Pretty** and **Raw** with `y` (prints raw JSON line unchanged).
 - **test:** Unit tests for clipboard helper and JSON formatting.
+- **feat:** Added `Ctrl+K` debug overlay to inspect key events sent to the app (useful for diagnosing terminal/OS key forwarding).
 
 ## [2.4.2] - 2026-02-02
 
