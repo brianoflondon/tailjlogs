@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.4.6] - 2026-02-02
+
+### Added
+
+- **feat:** OSC 52 (terminal clipboard) fallback when system clipboard utilities are unavailable — useful for SSH/headless sessions. Controlled via `TAILJLOGS_COPY_METHOD` (`auto|system|osc52|tk`) and `TAILJLOGS_OSC52_MAX_BYTES` (default `65536`).
+- **test:** Unit tests for OSC 52 helper and fallback behavior.
+
+### Changed
+
+- **chore:** Copy fallback order and configuration; improved error messages when all copy methods fail.
+
 ## [2.4.5] - 2026-02-02
 
 ### Added

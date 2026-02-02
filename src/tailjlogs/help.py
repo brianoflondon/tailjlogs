@@ -46,6 +46,10 @@ Repository: [https://github.com/brianoflondon/tailjlogs](https://github.com/bria
 - `ctrl+k` Toggle key-event debug overlay (shows the last key Textual received).
 - `ctrl+c` Exit the app.
 
+#### Copying over SSH / headless
+
+If you're running TailJLogs over SSH or on a machine without an X/Wayland display, TailJLogs will fall back to using terminal OSC 52 escape sequences to place data into the local terminal's clipboard (if supported by the terminal). Configure behaviour with the environment variables `TAILJLOGS_COPY_METHOD` (`auto|system|osc52|tk`) and `TAILJLOGS_OSC52_MAX_BYTES` (default `65536`).
+
 ### Find
 
 Press `ctrl+f` or `/` to open the find dialog. This highlights matching lines and allows navigation between matches.

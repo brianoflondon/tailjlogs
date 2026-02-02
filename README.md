@@ -9,8 +9,9 @@
 
 ![TailJLogs Screenshot](https://images.hive.blog/0x0/https://files.peakd.com/file/peakd-hive/brianoflondon/Eo6BoTCAqz5uSEgzXz9gWKtR5NDHQAhfFoMjpe7NyNgj1Crwsmv2dTt8c4fd583h3Ye.png)
 
-## What's New in v2.4.5
+## What's New in v2.4.6
 
+- **OSC 52 (terminal clipboard) fallback**: When a system clipboard is not available (e.g., headless SSH sessions), TailJLogs can use OSC 52 escape sequences to copy directly to the local terminal's clipboard. Configure with `TAILJLOGS_COPY_METHOD` (`auto|system|osc52|tk`) and `TAILJLOGS_OSC52_MAX_BYTES` (default `65536`).
 - **Auto-hide KeyDebug overlay**: Key debug overlay (`Ctrl+K`) now auto-hides after 3 seconds of inactivity (configurable via `KeyDebug.hide_timeout`). The timer resets on each key event.
 - **Copy-mode indicator**: The footer shows `Copy: Pretty` or `Copy: Raw` when the JSON detail panel is open so you can see the active copy format at a glance.
 
