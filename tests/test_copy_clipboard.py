@@ -27,7 +27,13 @@ def test_copy_uses_wl_copy_when_present(monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
 
     # Simulate wl-copy present and subprocess.run available
-    monkeypatch.setattr(log_view, "shutil", types.SimpleNamespace(which=lambda name: "/usr/bin/wl-copy" if name == "wl-copy" else None))
+    monkeypatch.setattr(
+        log_view,
+        "shutil",
+        types.SimpleNamespace(
+            which=lambda name: "/usr/bin/wl-copy" if name == "wl-copy" else None
+        ),
+    )
     mock_run = Mock()
     monkeypatch.setattr(log_view, "subprocess", types.SimpleNamespace(run=mock_run))
 
@@ -84,8 +90,7 @@ def test_format_line_for_copy_pretty_and_raw():
 
 
 def test_format_line_for_copy_invalid_raises():
-    bad = 'not a json'
-    import pytest
+    bad = "not a json"
 
     with pytest.raises(ValueError):
         log_view._format_line_for_copy(bad, raw=False)

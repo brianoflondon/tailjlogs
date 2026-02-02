@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
+import sys
 from asyncio import Lock
 from datetime import datetime
 
@@ -11,11 +15,6 @@ from textual.dom import NoScreen
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label
-
-import sys
-import json
-import shutil
-import subprocess
 
 
 def _copy_to_clipboard(text: str) -> tuple[bool, str | None]:
@@ -40,10 +39,14 @@ def _copy_to_clipboard(text: str) -> tuple[bool, str | None]:
             subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
             return True, None
         if shutil.which("xclip"):
-            subprocess.run(["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True)
+            subprocess.run(
+                ["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True
+            )
             return True, None
         if shutil.which("xsel"):
-            subprocess.run(["xsel", "--clipboard", "--input"], input=text.encode("utf-8"), check=True)
+            subprocess.run(
+                ["xsel", "--clipboard", "--input"], input=text.encode("utf-8"), check=True
+            )
             return True, None
 
         # Final fallback: Tkinter if available
@@ -79,6 +82,7 @@ def _format_line_for_copy(line: str, raw: bool = False) -> str:
         raise ValueError("Not valid JSON") from exc
 
     return json.dumps(data, indent=2, ensure_ascii=False)
+
 
 from tailjlogs.find_dialog import FilterDialog, FindDialog
 from tailjlogs.line_panel import LinePanel
