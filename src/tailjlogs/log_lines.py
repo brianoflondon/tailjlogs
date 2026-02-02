@@ -1132,9 +1132,9 @@ class LogLines(ScrollView, inherit_bindings=False):
         self.set_class(tail, "-tail")
         if tail:
             self.update_line_count()
-            self.scroll_to(y=self.max_scroll_y, animate=False)
-            if tail:
-                self.pointer_line = None
+            self.update_virtual_size()
+            self.scroll_to(y=self.max_scroll_y, animate=False, force=True)
+            self.pointer_line = None
 
     def update_line_count(self) -> None:
         if self._merge_lines is not None:
