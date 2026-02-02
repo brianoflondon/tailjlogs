@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.4.2] - 2026-02-02
+
+### Fixed
+
+- **fix:** When pressing `Ctrl+T` to enable tail mode, automatically scroll to the last line and begin tailing from there.
+
 ## [2.4.0] - 2026-02-01
 
 ### Added
