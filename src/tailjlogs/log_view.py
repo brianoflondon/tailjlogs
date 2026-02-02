@@ -12,6 +12,74 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label
 
+import sys
+import json
+import shutil
+import subprocess
+
+
+def _copy_to_clipboard(text: str) -> tuple[bool, str | None]:
+    """Copy text to the system clipboard using platform utilities.
+
+    Tries macOS `pbcopy`, Wayland `wl-copy`, X11 `xclip`/`xsel`, then falls back to
+    Tkinter if available. Returns (True, None) on success or (False, error_message).
+    """
+    try:
+        # macOS
+        if sys.platform == "darwin":
+            subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+            return True, None
+
+        # Windows
+        if sys.platform.startswith("win"):
+            subprocess.run("clip", input=text.encode("utf-8"), check=True, shell=True)
+            return True, None
+
+        # Linux / BSD - try common clipboard tools
+        if shutil.which("wl-copy"):
+            subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
+            return True, None
+        if shutil.which("xclip"):
+            subprocess.run(["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True)
+            return True, None
+        if shutil.which("xsel"):
+            subprocess.run(["xsel", "--clipboard", "--input"], input=text.encode("utf-8"), check=True)
+            return True, None
+
+        # Final fallback: Tkinter if available
+        try:
+            import tkinter as _tk
+
+            root = _tk.Tk()
+            root.withdraw()
+            root.clipboard_clear()
+            root.clipboard_append(text)
+            root.update()
+            root.destroy()
+            return True, None
+        except Exception as exc:  # pragma: no cover - environment dependent
+            return False, f"No clipboard utility found: {exc}"
+    except Exception as exc:  # pragma: no cover - runtime error
+        return False, str(exc)
+
+
+def _format_line_for_copy(line: str, raw: bool = False) -> str:
+    """Return the string that should be copied for the given line.
+
+    - If raw is True, returns the original line unchanged.
+    - If raw is False, attempts to parse and pretty-print JSON; raises ValueError
+      if parsing fails.
+    """
+    if raw:
+        return line
+
+    try:
+        data = json.loads(line)
+    except Exception as exc:  # pragma: no cover - parsing error handled by caller
+        raise ValueError("Not valid JSON") from exc
+
+    return json.dumps(data, indent=2, ensure_ascii=False)
+
 from tailjlogs.find_dialog import FilterDialog, FindDialog
 from tailjlogs.line_panel import LinePanel
 from tailjlogs.log_lines import LogLines
@@ -277,6 +345,11 @@ class LogView(Horizontal):
         Binding("slash", "show_find_dialog", "Find", key_display="^f", show=False),
         Binding("backslash", "show_filter_dialog", "Filter", key_display="\\"),
         Binding("ctrl+g", "goto", "Go to", key_display="^g"),
+        # Copy JSON detail to system clipboard:
+        Binding("meta+c", "copy_json", "Copy JSON", key_display="⌘C"),
+        Binding("ctrl+shift+c", "copy_json", "Copy JSON", key_display="^⇧C", show=False),
+        # Toggle copy format between Pretty (default) and Raw
+        Binding("y", "toggle_copy_format", "Toggle copy format", key_display="y"),
     ]
 
     show_find: reactive[bool] = reactive(False)
@@ -285,6 +358,8 @@ class LogView(Horizontal):
     show_line_numbers: reactive[bool] = reactive(False)
     tail: reactive[bool] = reactive(False)
     can_tail: reactive[bool] = reactive(True)
+    # When False (default) copy uses pretty-printed JSON; when True copies raw JSON line
+    copy_raw: reactive[bool] = reactive(False)
 
     def __init__(
         self,
@@ -484,3 +559,41 @@ class LogView(Horizontal):
         from tailjlogs.goto_screen import GotoScreen
 
         self.app.push_screen(GotoScreen(self.query_one(LogLines)))
+
+    def action_copy_json(self) -> None:
+        """Copy the JSON object shown in the detail panel to the clipboard.
+
+        Uses the current copy format (pretty vs raw). If the detail panel is not
+        open, or the selected line is not valid JSON when pretty is requested,
+        a notification is shown.
+        """
+        if not self.show_panel:
+            self.notify("Open the line panel (Enter) to view/copy JSON", title="Copy")
+            return
+
+        log_lines = self.query_one(LogLines)
+        pointer_line = log_lines.pointer_line
+        if pointer_line is None:
+            self.notify("No line selected", title="Copy", severity="error")
+            return
+
+        line, _text, _timestamp = log_lines.get_text(pointer_line, block=True, abbreviate=False)
+
+        try:
+            out = _format_line_for_copy(line, raw=self.copy_raw)
+        except ValueError:
+            self.notify("Current line is not valid JSON", title="Copy", severity="error")
+            return
+
+        ok, err = _copy_to_clipboard(out)
+        if ok:
+            fmt = "Raw" if self.copy_raw else "Pretty"
+            self.notify(f"Copied {fmt} JSON to clipboard", title="Copy")
+        else:
+            self.notify(f"Copy failed: {err}", title="Copy", severity="error")
+
+    def action_toggle_copy_format(self) -> None:
+        """Toggle between pretty-printed and raw JSON when copying."""
+        self.copy_raw = not self.copy_raw
+        mode = "Raw" if self.copy_raw else "Pretty"
+        self.notify(f"Copy format: {mode}", title="Copy")

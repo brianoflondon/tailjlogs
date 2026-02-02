@@ -1,6 +1,6 @@
 [project]
 name = "tailjlogs"
-version = "2.4.2"
+version = "2.4.3"
 description = "A terminal log file viewer with enhanced JSONL support - based on Toolong"
 authors = [{ name = "Brian of London", email = "brian@brianoflondon.me" }]
 license = "MIT"

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on "Keep a Changelog" and this project adheres to Semantic Versioning.
 
+## [2.4.3] - 2026-02-02
+
+### Added
+
+- **feat:** Copy JSON detail to system clipboard with `⌘C` (macOS) or `Ctrl+Shift+C` (cross-platform). Default format is **Pretty** (pretty-printed JSON).
+- **feat:** Toggle copy format between **Pretty** and **Raw** with `y` (prints raw JSON line unchanged).
+- **test:** Unit tests for clipboard helper and JSON formatting.
+
 ## [2.4.2] - 2026-02-02
 
 ### Fixed

@@ -50,7 +50,7 @@ Instead of displaying JSON logs as an unreadable wall of braces and quotes, Tail
 01-15T09:36:38.194 INFO module 39 : message
 ```
 
-This is readable. Your eyes can scan it. You can actually understand what's happening without having to expand every single line. When you want to see the full JSON? Press Enter. The entire JSON object displays beautifully formatted in a detail panel below.
+This is readable. Your eyes can scan it. You can actually understand what's happening without having to expand every single line. When you want to see the full JSON? Press Enter. The entire JSON object displays beautifully formatted in a detail panel below. You can also copy the JSON to your clipboard with `⌘C` (macOS) or `Ctrl+Shift+C`, and press `y` to toggle between **Pretty** and **Raw** copy modes (default is Pretty).
 
 ![Side by side](https://files.peakd.com/file/peakd-hive/brianoflondon/23tGTggBu4XCvJFe8g3cJDjRtKQryCHWefai3waca6ofEnmZA3FmRhsGp1rCDQ1TMaxwQ.png)
 
