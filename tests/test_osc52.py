@@ -1,4 +1,5 @@
 import sys
+
 from tailjlogs import log_view
 
 
@@ -8,6 +9,7 @@ def test_send_osc52_encodes(monkeypatch):
     class FakeStdout:
         def write(self, s):
             writes.append(s)
+
         def flush(self):
             pass
 
@@ -34,11 +36,11 @@ def test_copy_fallback_to_osc52(monkeypatch):
     called = {}
 
     def fake_osc52(text, max_bytes=0):
-        called['text'] = text
+        called["text"] = text
         return True, None
 
     monkeypatch.setattr(log_view, "_send_osc52", fake_osc52)
 
     ok, err = log_view._copy_to_clipboard('{"a": 1}')
     assert ok is True
-    assert 'text' in called
+    assert "text" in called
