@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import base64
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -24,30 +26,49 @@ def _copy_to_clipboard(text: str) -> tuple[bool, str | None]:
     Tkinter if available. Returns (True, None) on success or (False, error_message).
     """
     try:
-        # macOS
-        if sys.platform == "darwin":
-            subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
-            return True, None
+        method = os.getenv("TAILJLOGS_COPY_METHOD", "auto").lower()
+        # Use system clipboard utilities unless osc52 is explicitly requested
+        if method != "osc52":
+            # macOS
+            if sys.platform == "darwin":
+                subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+                return True, None
 
-        # Windows
-        if sys.platform.startswith("win"):
-            subprocess.run("clip", input=text.encode("utf-8"), check=True, shell=True)
-            return True, None
+            # Windows
+            if sys.platform.startswith("win"):
+                subprocess.run("clip", input=text.encode("utf-8"), check=True, shell=True)
+                return True, None
 
-        # Linux / BSD - try common clipboard tools
-        if shutil.which("wl-copy"):
-            subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
-            return True, None
-        if shutil.which("xclip"):
-            subprocess.run(
-                ["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True
-            )
-            return True, None
-        if shutil.which("xsel"):
-            subprocess.run(
-                ["xsel", "--clipboard", "--input"], input=text.encode("utf-8"), check=True
-            )
-            return True, None
+            # Linux / BSD - try common clipboard tools
+            if shutil.which("wl-copy"):
+                subprocess.run(["wl-copy"], input=text.encode("utf-8"), check=True)
+                return True, None
+            if shutil.which("xclip"):
+                subprocess.run(
+                    ["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True
+                )
+                return True, None
+            if shutil.which("xsel"):
+                subprocess.run(
+                    ["xsel", "--clipboard", "--input"], input=text.encode("utf-8"), check=True
+                )
+                return True, None
+
+        # Try terminal OSC 52 (useful for SSH/headless terminals)
+        method = os.getenv("TAILJLOGS_COPY_METHOD", "auto").lower()
+        osc_max = int(os.getenv("TAILJLOGS_OSC52_MAX_BYTES", "65536"))
+        if method in ("osc52", "auto"):
+            # prefer osc52 when DISPLAY is not set or when explicitly requested
+            try:
+                ok, err = _send_osc52(text, max_bytes=osc_max)
+                if ok:
+                    return True, None
+                if method == "osc52":
+                    return False, err or "OSC52 failed"
+            except Exception as exc:
+                if method == "osc52":
+                    return False, str(exc)
+                # else continue to Tkinter fallback
 
         # Final fallback: Tkinter if available
         try:
@@ -63,6 +84,31 @@ def _copy_to_clipboard(text: str) -> tuple[bool, str | None]:
         except Exception as exc:  # pragma: no cover - environment dependent
             return False, f"No clipboard utility found: {exc}"
     except Exception as exc:  # pragma: no cover - runtime error
+        return False, str(exc)
+
+
+def _send_osc52(text: str, max_bytes: int = 65536) -> tuple[bool, str | None]:
+    """Send text to the local terminal clipboard using OSC 52 escape sequence.
+
+    Encodes `text` as UTF-8 then base64 and writes the OSC 52 sequence to stdout.
+    Returns (True, None) on success, or (False, error_message) on failure.
+    """
+    try:
+        data = text.encode("utf-8")
+    except Exception as exc:
+        return False, str(exc)
+
+    if len(data) > max_bytes:
+        return False, f"OSC52 payload too large ({len(data)} > {max_bytes} bytes)"
+
+    b64 = base64.b64encode(data).decode("ascii")
+    seq = f"\x1b]52;c;{b64}\a"
+    try:
+        # Write to stdout so the terminal can receive the OSC 52 sequence
+        sys.stdout.write(seq)
+        sys.stdout.flush()
+        return True, None
+    except Exception as exc:
         return False, str(exc)
 
 
