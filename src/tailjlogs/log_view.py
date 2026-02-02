@@ -614,7 +614,12 @@ class LogView(Horizontal):
         if not self.show_key_debug:
             return
         # Try common attributes for key and modifiers; be defensive.
-        key = getattr(event, "key", None) or getattr(event, "character", None) or getattr(event, "key_name", None) or str(event)
+        key = (
+            getattr(event, "key", None)
+            or getattr(event, "character", None)
+            or getattr(event, "key_name", None)
+            or str(event)
+        )
         mods: list[str] = []
         for m in ("ctrl", "shift", "meta", "alt"):
             try:
